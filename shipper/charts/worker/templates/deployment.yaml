@@ -47,18 +47,19 @@ spec:
       serviceAccountName: tekton-pipelines-controller
       containers:
         - name: tekton-pipelines-controller
-          image: registry.k8s.com/gcr-sync/tektoncd-pipeline-controller:v0.54.0
+          image: "{{ .Values.image.registry }}/{{ .Values.image.controller.repository }}:{{ .Values.image.controller.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
           args: [
             # These images are built on-demand by `ko resolve` and are replaced
             # by image references by digest.
-            "-entrypoint-image", "registry.k8s.com/gcr-sync/tektoncd-pipeline-entrypoint:v0.54.0", "-nop-image", "registry.k8s.com/gcr-sync/tektoncd-pipeline-nop:v0.54.0", "-sidecarlogresults-image", "registry.k8s.com/gcr-sync/tektoncd-pipeline-sidecarlogresults:v0.54.0", "-workingdirinit-image", "registry.k8s.com/gcr-sync/tektoncd-pipeline-workingdirinit:v0.54.0",
+            "-entrypoint-image", "{{ .Values.image.registry }}/{{ .Values.image.entrypoint.repository }}:{{ .Values.image.entrypoint.tag }}", "-nop-image", "{{ .Values.image.registry }}/{{ .Values.image.nop.repository }}:{{ .Values.image.nop.tag }}", "-sidecarlogresults-image", "{{ .Values.image.registry }}/{{ .Values.image.sidecarlogresults.repository }}:{{ .Values.image.sidecarlogresults.tag }}", "-workingdirinit-image", "{{ .Values.image.registry }}/{{ .Values.image.workingdirinit.repository }}:{{ .Values.image.workingdirinit.tag }}",
             # The shell image must allow root in order to create directories and copy files to PVCs.
             # cgr.dev/chainguard/busybox as of April 14 2022
             # image shall not contains tag, so it will be supported on a runtime like cri-o
-            "-shell-image", "registry.k8s.com/cgr-sync/chainguard/busybox",
+            "-shell-image", "{{ .Values.image.registry }}/{{ .Values.image.chainguardBusybox.repository }}:{{ .Values.image.chainguardBusybox.tag }}",
             # for script mode to work with windows we need a powershell image
             # pinning to nanoserver tag as of July 15 2021
-            "-shell-image-win", "powershell:nanoserver"]
+            "-shell-image-win", "{{ .Values.image.registry }}/{{ .Values.image.powershell.repository }}:{{ .Values.image.powershell.tag }}"]
           volumeMounts:
             - name: config-logging
               mountPath: /etc/config-logging
@@ -190,7 +191,8 @@ spec:
       serviceAccountName: tekton-events-controller
       containers:
         - name: tekton-events-controller
-          image: registry.k8s.com/gcr-sync/tektoncd-pipeline-events:v0.54.0
+          image: "{{ .Values.image.registry }}/{{ .Values.image.event.repository }}:{{ .Values.image.event.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
           args: []
           volumeMounts:
             - name: config-logging
@@ -326,7 +328,8 @@ spec:
         - name: webhook
           # This is the Go import path for the binary that is containerized
           # and substituted here.
-          image: registry.k8s.com/gcr-sync/tektoncd-pipeline-webhook:v0.54.0
+          image: "{{ .Values.image.registry }}/{{ .Values.image.webhook.repository }}:{{ .Values.image.webhook.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
           # Resource request required for autoscaler to take any action for a metric
           resources:
             requests:

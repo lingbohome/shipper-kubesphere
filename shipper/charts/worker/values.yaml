@@ -1,53 +1,38 @@
+
 image:
   registry: registry.cn-shanghai.aliyuncs.com/kube-shipper
-  server:
-    repository: shipper-server
-    tag: v0.1.0
+  controller:
+    repository: tektoncd-pipeline-controller
+    tag: v0.54.0
+  event:
+    repository: tektoncd-pipeline-events
+    tag: v0.54.0
+  webhook:
+    repository: tektoncd-pipeline-webhook
+    tag: v0.54.0
+  entrypoint:
+    repository: tektoncd-pipeline-entrypoint
+    tag: v0.54.0
+  nop:
+    repository: tektoncd-pipeline-nop
+    tag: v0.54.0
+  sidecarlogresults:
+    repository: tektoncd-pipeline-sidecarlogresults
+    tag: v0.54.0
+  workingdirinit:
+    repository: tektoncd-pipeline-workingdirinit
+    tag: v0.54.0
+  chainguardBusybox:
+    repository: chainguard-busybox
+    tag: latest
+  powershell:
+    repository: powershell
+    tag: nanoserver                            
   pullPolicy: IfNotPresent
-imagePullSecrets: []
 
-replicaCount: 1
-autoscaling:
-  enabled: false
+imagePullSecrets: []
 
 nameOverride: ""
 fullnameOverride: ""
-namespace: "shipper-system"
 
-server:
-  podAnnotations: {}
-  podSecurityContext: {}
-  # fsGroup: 2000
-  securityContext: {}
-    # capabilities:
-    #   drop:
-    #   - ALL
-    # readOnlyRootFilesystem: true
-    # runAsNonRoot: true
-  # runAsUser: 1000
-  resources: {}
-    # We usually recommend not to specify default resources and to leave this as a conscious
-    # choice for the user. This also increases chances charts run on environments with little
-    # resources, such as Minikube. If you do want to specify resources, uncomment the following
-    # lines, adjust them as necessary, and remove the curly braces after 'resources:'.
-    # limits:
-    #   cpu: 500m
-    #   memory: 1024Mi
-    # requests:
-    #  cpu: 100m
-    #  memory: 128Mi
-  nodeSelector: {}
-  tolerations: []
-  affinity: {}
 
-  service:
-    type: ClusterIP
-    port: 5000
-
-serviceAccount:
-  # Specifies whether a service account should be created
-  create: true
-  annotations: {}
-  # The name of the service account to use.
-  # If not set and create is true, a name is generated using the fullname template
-  name: "shipper-sa"
