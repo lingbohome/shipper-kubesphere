@@ -2,42 +2,46 @@ apiVersion: kubesphere.io/v1alpha1
 name: shipper
 version: 0.1.0
 displayName:
-  zh: 示例扩展组件
-  en: Sample Extension
+  zh: 云交付
+  en: shipper
 description:
-  zh: 这是一个示例扩展组件，这是它的描述
-  en: This is a sample extension, and this is its description
+  zh: 云交付（Shipper）是面向未来的云原生构建与交付平台，基于平台工程理念自助式、开箱即用的云原生 DevOps 平台，致力于让云原生应用的构建与交付，变得更简单、更高效，同时赋能产
+研、交付运维一体化高效协作，助力企业产品的业务价值快速高质量的交付给客户。
+  en: Shipper is a future-oriented cloud-native build and delivery platform, based on the platform engineering concept of self-service, out-of-the-box cloud-native DevOps platform, committed to making the construction and delivery of cloud-native applications simpler, more efficient, and empowering production
+The integrated and efficient collaboration of R&D, delivery, and O&M helps the business value of enterprise products to be delivered to customers quickly and with high quality
 category: integration-delivery
 keywords:
+  - DevOps
+  - CI/CD
   - integration-delivery
-home: https://kubesphere.io
+home: https://github.com/lingbohome
 sources:
-  - https://github.com/kubesphere
-kubeVersion: ">=1.19.0-0"
+  - https://github.com/lingbohome
+kubeVersion: ">=1.20.0-0"
 ksVersion: ">=4.0.0-0"
 maintainers:
   - name: "lingbohome"
     email: "lingbo@lingbohome.com"
-    url: "https://github.com/lingbohome/shipper-kubesphere"
+    url: "https://github.com/lingbohome"
 provider:
   zh:
     name: "lingbohome"
     email: "lingbo@lingbohome.com"
-    url: "https://github.com/lingbohome/shipper-kubesphere"
+    url: "https://github.com/lingbohome"
   en:
     name: "lingbohome"
     email: "lingbo@lingbohome.com"
-    url: "https://github.com/lingbohome/shipper-kubesphere"
+    url: "https://github.com/lingbohome"
 icon: ./static/favicon.svg
 screenshots:
   - ./static/screenshots/screenshot.png
 dependencies:
-  - name: frontend
+  - name: ui
     tags:
     - extension
-  - name: backend
+  - name: server
     tags:
-    - agent
+    - extension
 # installationMode describes how to install subcharts, it can be HostOnly or Multicluster.
 # In Multicluster mode, the subchart with tag `extension` will only be deployed to the host cluster,
 # and the subchart with tag `agent` will be deployed to all selected clusters.
