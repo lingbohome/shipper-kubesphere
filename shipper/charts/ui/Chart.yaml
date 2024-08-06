@@ -1,0 +1,11 @@
+apiVersion: v2
+name: ui
+description: UI of shipper extension.
+type: application
+version: 0.1.0
+appVersion: "0.1.0"
+home: https://github.com/lingbohome
+sources:
+  - https://github.com/lingbohome
+annotations:
+  extensions.kubesphere.io/shipper: ui

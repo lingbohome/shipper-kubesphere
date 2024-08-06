@@ -1,11 +1,5 @@
-frontend:
+ui:
   enabled: true
   image:
     repository: kubespheredev/shipper-frontend
-    tag: latest
-
-backend:
-  enabled: true
-  image:
-    repository: kubespheredev/shipper-api
     tag: latest

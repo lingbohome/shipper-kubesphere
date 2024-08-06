@@ -32,11 +32,7 @@ rules:
       - pods
       - persistentvolumeclaims 
     verbs:
-      - "*"
-  - nonResourceURLs:
-    - "/metrics"
-    verbs:
-    - get               
+      - "*"             
 
 ---
 kind: Role

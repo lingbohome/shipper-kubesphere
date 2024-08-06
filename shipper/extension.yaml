@@ -5,10 +5,8 @@ displayName:
   zh: 云交付
   en: shipper
 description:
-  zh: 云交付（Shipper）是面向未来的云原生构建与交付平台，基于平台工程理念自助式、开箱即用的云原生 DevOps 平台，致力于让云原生应用的构建与交付，变得更简单、更高效，同时赋能产
-研、交付运维一体化高效协作，助力企业产品的业务价值快速高质量的交付给客户。
-  en: Shipper is a future-oriented cloud-native build and delivery platform, based on the platform engineering concept of self-service, out-of-the-box cloud-native DevOps platform, committed to making the construction and delivery of cloud-native applications simpler, more efficient, and empowering production
-The integrated and efficient collaboration of R&D, delivery, and O&M helps the business value of enterprise products to be delivered to customers quickly and with high quality
+  zh: 云交付（Shipper）是面向未来的云原生构建与交付平台，基于平台工程理念自助式、开箱即用的云原生 DevOps 平台，致力于让云原生应用的构建与交付，变得更简单、更高效，同时赋能产研、交付运维一体化高效协作，助力企业产品的业务价值快速高质量的交付给客户。
+  en: Shipper is a future-oriented cloud-native build and delivery platform, based on the platform engineering concept of self-service, out-of-the-box cloud-native DevOps platform, committed to making the construction and delivery of cloud-native applications simpler, more efficient, and empowering production The integrated and efficient collaboration of R&D, delivery, and O&M helps the business value of enterprise products to be delivered to customers quickly and with high quality
 category: integration-delivery
 keywords:
   - DevOps
@@ -37,9 +35,6 @@ screenshots:
   - ./static/screenshots/screenshot.png
 dependencies:
   - name: ui
-    tags:
-    - extension
-  - name: server
     tags:
     - extension
 # installationMode describes how to install subcharts, it can be HostOnly or Multicluster.
