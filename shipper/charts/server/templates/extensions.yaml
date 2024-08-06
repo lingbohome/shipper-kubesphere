@@ -1,0 +1,10 @@
+apiVersion: extensions.kubesphere.io/v1alpha1
+kind: APIService
+metadata:
+  name: v1alpha1.resource.lingbohome.com
+spec:
+  group: resource.lingbohome.com
+  version: v1alpha1                                      
+  url: http://shipper-server.{{ default .Release.Namespace .Values.namespace }}.svc:5000
+status:
+  state: Available  

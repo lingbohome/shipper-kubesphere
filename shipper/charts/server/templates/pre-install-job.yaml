@@ -1,0 +1,24 @@
+{{- if .Values.namespace }}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: "{{ .Release.Name }}-pre-install"
+  annotations:
+    helm.sh/hook: pre-install
+    helm.sh/hook-weight: "1"
+    helm.sh/hook-delete-policy: before-hook-creation,hook-succeeded
+spec:
+  template:
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: pre-install-job
+          image: "kubesphere/kubectl:v1.27.4"
+          command: ["/bin/bash","-c","\n
+          if kubectl get namespace shipper-system &>/dev/null; then \n
+            kubectl label ns shipper-system kubesphere.io/workspace=system-workspace
+            echo 'Namespace shipper-system already exists. Skipping...' \n
+          else \n
+            kubectl create namespace shipper-system && kubectl label ns shipper-system kubesphere.io/workspace=system-workspace \n
+          fi"]
+{{- end }}

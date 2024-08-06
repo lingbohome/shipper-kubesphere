@@ -1,0 +1,11 @@
+annotations:
+  extensions.kubesphere.io/shipper: server
+apiVersion: v2
+appVersion: "0.1.0"
+description: Server of shipper extension
+home: https://github.com/lingbohome
+name: server
+sources:
+- https://github.com/lingbohome
+type: application
+version: 0.1.0

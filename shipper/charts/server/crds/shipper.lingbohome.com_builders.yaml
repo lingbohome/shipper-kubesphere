@@ -1,0 +1,82 @@
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.15.0
+  labels:
+    kubesphere.io/resource-served: "true"
+  name: builders.shipper.lingbohome.com
+spec:
+  group: shipper.lingbohome.com
+  names:
+    kind: Builder
+    listKind: BuilderList
+    plural: builders
+    singular: builder
+  scope: Namespaced
+  versions:
+  - name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: Builder is the Schema for the builders API
+        properties:
+          apiVersion:
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+            type: string
+          kind:
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: BuilderSpec defines the desired state of Builder
+            properties:
+              ciEngine:
+                type: string
+              params:
+                additionalProperties:
+                  type: string
+                type: object
+              templateRef:
+                properties:
+                  name:
+                    type: string
+                required:
+                - name
+                type: object
+            required:
+            - templateRef
+            type: object
+          status:
+            description: BuilderStatus defines the observed state of Builder
+            properties:
+              lastUpdateTime:
+                format: date-time
+                type: string
+              message:
+                type: string
+              phase:
+                default: Pending
+                enum:
+                - Active
+                - Disabled
+                - Unknown
+                - Unavailable
+                - Pending
+                type: string
+            type: object
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}

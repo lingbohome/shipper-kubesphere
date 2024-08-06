@@ -1,0 +1,30 @@
+{{- if .Values.namespace }}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: "{{ .Release.Name }}-post-delete"
+  annotations:
+    helm.sh/hook: post-delete
+    helm.sh/hook-weight: "1"
+    helm.sh/hook-delete-policy: before-hook-creation,hook-succeeded
+spec:
+  template:
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: post-delete-job
+          image: "kubesphere/kubectl:v1.27.4"
+          command:
+            - "/bin/bash"
+            - "-c"
+            - |
+              if kubectl get ns tekton-pipelines-resolvers; then
+                kubectl delete ns tekton-pipelines-resolvers tekton-pipelines
+              fi
+              if kubectl get ns tekton-pipelines; then
+                kubectl delete ns tekton-pipelines
+              fi
+              if kubectl get ns {{ .Values.namespace }}; then
+                kubectl delete ns {{ .Values.namespace }}
+              fi
+{{- end }}
