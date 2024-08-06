@@ -6,6 +6,37 @@ rules:
       - 'extensions.kubesphere.io'
     resources:
       - '*'
+  - verbs:
+      - '*'
+    apiGroups:
+      - 'shipper.lingbohome.com'
+    resources:
+      - '*' 
+  - apiGroups:
+    - authentication.k8s.io
+    resources:
+    - tokenreviews
+    verbs:
+    - create
+  - apiGroups:
+    - authorization.k8s.io
+    resources:
+    - subjectaccessreviews
+    verbs:
+    - create        
+  - apiGroups:
+      - ""
+    resources:
+      - secrets
+      - configmaps
+      - pods
+      - persistentvolumeclaims 
+    verbs:
+      - "*"
+  - nonResourceURLs:
+    - "/metrics"
+    verbs:
+    - get               
 
 ---
 kind: Role
@@ -20,10 +51,22 @@ rules:
       - 'autoscaling'
     resources:
       - '*'
-  - verbs:
-      - '*'
-    apiGroups:
-      - 'networking.k8s.io'
+  - apiGroups:
+    - coordination.k8s.io
     resources:
-      - 'ingresses'
-      - 'networkpolicies'
+    - leases
+    verbs:
+    - get
+    - list
+    - watch
+    - create
+    - update
+    - patch
+    - delete
+  - apiGroups:
+    - ""
+    resources:
+    - events
+    verbs:
+    - create
+    - patch
