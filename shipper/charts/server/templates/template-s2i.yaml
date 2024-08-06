@@ -1,0 +1,807 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: s2i
+  namespace: {{ default .Release.Namespace .Values.namespace }}
+  labels:
+    shipper.lingbohome.com/managed: "true"
+    shipper.lingbohome.com/templated-by: "builder"
+    template.shipper.lingbohome.com/version: "0.1.0"
+    template.shipper.lingbohome.com/level: "system"
+  annotations:
+    kubesphere.io/alias-name: 源码构建镜像
+    kubesphere.io/creator: system
+    kubesphere.io/description: 基于源码构建镜像，支持云原生多语言构建
+data:
+  template.yaml: |
+    apiVersion: tekton.dev/v1
+    kind: PipelineRun
+    metadata:
+      annotations:
+        tekton.dev/displayName: Shipper-Builder
+        tekton.dev/pipelines.minVersion: 0.17.0
+        tekton.dev/platforms: linux/amd64
+        tekton.dev/tags: image-build
+      generateName: baesd-shipper
+      labels:
+        app.kubernetes.io/version: '0.1'
+        shipper.lingbohome.com/platform: shipper
+        shipper.lingbohome.com/useFor: builder
+    spec:
+      params:
+        - name: BUILD_TYPE
+          value: {{ .Values.buildType | quote }}     
+        - name: APP_IMAGE_HOST
+          value: {{ .Release.OciRegistry.Host }}
+        - name: APP_IMAGE_REPO
+          value: {{ if .Release.OciRegistry.Group }}{{ .Release.OciRegistry.Group }}/{{ end }}{{ .Release.Workspace }}/{{ .Release.Namespace }}/{{ .Release.BuilderName }}
+        - name: APP_IMAGE_TAG
+          value: latest
+        - name: SOURCE_URL
+          value: {{ .Values.sourceUrl | default "https://github.com/lingbohome/sample-code.git" }} 
+        - name: SOURCE_REFERENCE
+          value: {{ .Values.sourceRef | default "" | quote }} 
+        - name: SOURCE_SUBPATH
+          value: {{ .Values.sourceSubPath | default "" | quote }} 
+        - name: DOCKERFILE
+          value: {{ .Values.sourceDockerfilePath | default "./Dockerfile" }}
+        - name: ENV_VARS
+          value: []
+        - name: EXTRA_ARGS
+          value: []
+        - name: PROCESS_TYPE
+          value: web
+      pipelineSpec:
+        description: The S2I pipeline builds source from a Git repository into a container image and pushes it to a registry.
+        params:
+          - default: '0'
+            description: If the value is 0, cloud native is used; otherwise, Dockerfile is used
+            name: BUILD_TYPE
+            type: string
+          - default: 10.0.16.3:31500
+            description: The host of where to store the app image.
+            name: APP_IMAGE_HOST
+            type: string
+          - description: The name of where to store the app image.
+            name: APP_IMAGE_REPO
+            type: string
+          - default: latest
+            description: The tag of where to store the app image.
+            name: APP_IMAGE_TAG
+            type: string
+          - description: A git repo url where the source code resides.
+            name: SOURCE_URL
+            type: string
+          - default: ''
+            description: The branch, tag or SHA to checkout.
+            name: SOURCE_REFERENCE
+            type: string
+          - default: ''
+            description: A subpath within checked out source where the source to build is located.
+            name: SOURCE_SUBPATH
+            type: string
+          - default: ./Dockerfile
+            description: Path to the Dockerfile to build.
+            name: DOCKERFILE
+            type: string
+          - default:
+              - ''
+            description: Environment variables to set during _build-time_.
+            name: ENV_VARS
+            type: array
+          - default: []
+            description: Additional args to pass to the Kaniko executor.
+            name: EXTRA_ARGS
+            type: array
+          - default: web
+            description: The default process type to set on the image.
+            name: PROCESS_TYPE
+            type: string
+        tasks:
+          - name: fetch-from-git
+            params:
+              - name: url
+                value: $(params.SOURCE_URL)
+              - name: revision
+                value: $(params.SOURCE_REFERENCE)
+              - name: sslVerify
+                value: 'false'
+            taskSpec:
+              description: |
+                These Tasks are Git tasks to work with repositories used by other tasks in your Pipeline.
+                The git-clone Task will clone a repo from the provided url into the output Workspace. By default the repo will be cloned into the root of your Workspace. You can clone into a subdirectory by setting this Task's subdirectory param. This Task also supports sparse checkouts. To perform a sparse checkout, pass a list of comma separated directory patterns to this Task's sparseCheckoutDirectories param.
+              params:
+                - description: Repository URL to clone from.
+                  name: url
+                  type: string
+                - default: ''
+                  description: Revision to checkout. (branch, tag, sha, ref, etc...)
+                  name: revision
+                  type: string
+                - default: ''
+                  description: Refspec to fetch before checking out revision.
+                  name: refspec
+                  type: string
+                - default: 'true'
+                  description: Initialize and fetch git submodules.
+                  name: submodules
+                  type: string
+                - default: '1'
+                  description: Perform a shallow clone, fetching only the most recent N commits.
+                  name: depth
+                  type: string
+                - default: 'true'
+                  description: Set the `http.sslVerify` global git config. Setting this to `false` is not advised unless you are sure that you trust your git remote.
+                  name: sslVerify
+                  type: string
+                - default: ca-bundle.crt
+                  description: file name of mounted crt using ssl-ca-directory workspace. default value is ca-bundle.crt.
+                  name: crtFileName
+                  type: string
+                - default: ''
+                  description: Subdirectory inside the `output` Workspace to clone the repo into.
+                  name: subdirectory
+                  type: string
+                - default: ''
+                  description: Define the directory patterns to match or exclude when performing a sparse checkout.
+                  name: sparseCheckoutDirectories
+                  type: string
+                - default: 'true'
+                  description: Clean out the contents of the destination directory if it already exists before cloning.
+                  name: deleteExisting
+                  type: string
+                - default: ''
+                  description: HTTP proxy server for non-SSL requests.
+                  name: httpProxy
+                  type: string
+                - default: ''
+                  description: HTTPS proxy server for SSL requests.
+                  name: httpsProxy
+                  type: string
+                - default: ''
+                  description: Opt out of proxying HTTP/HTTPS requests.
+                  name: noProxy
+                  type: string
+                - default: 'true'
+                  description: Log the commands that are executed during `git-clone`'s operation.
+                  name: verbose
+                  type: string
+                - default: registry.k8s.com/tekton-releases/github.com/tektoncd/pipeline/cmd/git-init:v0.40.2
+                  description: The image providing the git-init binary that this Task runs.
+                  name: gitInitImage
+                  type: string
+                - default: /home/git
+                  description: |
+                    Absolute path to the user's home directory.
+                    
+                  name: userHome
+                  type: string
+              results:
+                - description: The precise commit SHA that was fetched by this Task.
+                  name: commit
+                  type: string
+                - description: The precise URL that was fetched by this Task.
+                  name: url
+                  type: string
+                - description: The epoch timestamp of the commit that was fetched by this Task.
+                  name: committer-date
+                  type: string
+              steps:
+                - computeResources: {}
+                  env:
+                    - name: HOME
+                      value: $(params.userHome)
+                    - name: PARAM_URL
+                      value: $(params.url)
+                    - name: PARAM_REVISION
+                      value: $(params.revision)
+                    - name: PARAM_REFSPEC
+                      value: $(params.refspec)
+                    - name: PARAM_SUBMODULES
+                      value: $(params.submodules)
+                    - name: PARAM_DEPTH
+                      value: $(params.depth)
+                    - name: PARAM_SSL_VERIFY
+                      value: $(params.sslVerify)
+                    - name: PARAM_CRT_FILENAME
+                      value: $(params.crtFileName)
+                    - name: PARAM_SUBDIRECTORY
+                      value: $(params.subdirectory)
+                    - name: PARAM_DELETE_EXISTING
+                      value: $(params.deleteExisting)
+                    - name: PARAM_HTTP_PROXY
+                      value: $(params.httpProxy)
+                    - name: PARAM_HTTPS_PROXY
+                      value: $(params.httpsProxy)
+                    - name: PARAM_NO_PROXY
+                      value: $(params.noProxy)
+                    - name: PARAM_VERBOSE
+                      value: $(params.verbose)
+                    - name: PARAM_SPARSE_CHECKOUT_DIRECTORIES
+                      value: $(params.sparseCheckoutDirectories)
+                    - name: PARAM_USER_HOME
+                      value: $(params.userHome)
+                    - name: WORKSPACE_OUTPUT_PATH
+                      value: $(workspaces.output.path)
+                    - name: WORKSPACE_SSH_DIRECTORY_BOUND
+                      value: $(workspaces.ssh-directory.bound)
+                    - name: WORKSPACE_SSH_DIRECTORY_PATH
+                      value: $(workspaces.ssh-directory.path)
+                    - name: WORKSPACE_BASIC_AUTH_DIRECTORY_BOUND
+                      value: $(workspaces.basic-auth.bound)
+                    - name: WORKSPACE_BASIC_AUTH_DIRECTORY_PATH
+                      value: $(workspaces.basic-auth.path)
+                    - name: WORKSPACE_SSL_CA_DIRECTORY_BOUND
+                      value: $(workspaces.ssl-ca-directory.bound)
+                    - name: WORKSPACE_SSL_CA_DIRECTORY_PATH
+                      value: $(workspaces.ssl-ca-directory.path)
+                  image: $(params.gitInitImage)
+                  name: clone
+                  script: |
+                    #!/usr/bin/env sh
+                    set -eu
+                    
+                    if [ "${PARAM_VERBOSE}" = "true" ] ; then
+                      set -x
+                    fi
+                    
+                    if [ "${WORKSPACE_BASIC_AUTH_DIRECTORY_BOUND}" = "true" ] ; then
+                      cp "${WORKSPACE_BASIC_AUTH_DIRECTORY_PATH}/.git-credentials" "${PARAM_USER_HOME}/.git-credentials"
+                      cp "${WORKSPACE_BASIC_AUTH_DIRECTORY_PATH}/.gitconfig" "${PARAM_USER_HOME}/.gitconfig"
+                      chmod 400 "${PARAM_USER_HOME}/.git-credentials"
+                      chmod 400 "${PARAM_USER_HOME}/.gitconfig"
+                    fi
+                    
+                    if [ "${WORKSPACE_SSH_DIRECTORY_BOUND}" = "true" ] ; then
+                      cp -R "${WORKSPACE_SSH_DIRECTORY_PATH}" "${PARAM_USER_HOME}"/.ssh
+                      chmod 700 "${PARAM_USER_HOME}"/.ssh
+                      chmod -R 400 "${PARAM_USER_HOME}"/.ssh/*
+                    fi
+                    
+                    if [ "${WORKSPACE_SSL_CA_DIRECTORY_BOUND}" = "true" ] ; then
+                      export GIT_SSL_CAPATH="${WORKSPACE_SSL_CA_DIRECTORY_PATH}"
+                      if [ "${PARAM_CRT_FILENAME}" != "" ] ; then
+                          export GIT_SSL_CAINFO="${WORKSPACE_SSL_CA_DIRECTORY_PATH}/${PARAM_CRT_FILENAME}"
+                      fi
+                    fi
+                    CHECKOUT_DIR="${WORKSPACE_OUTPUT_PATH}/${PARAM_SUBDIRECTORY}"
+                    
+                    cleandir() {
+                      # Delete any existing contents of the repo directory if it exists.
+                      #
+                      # We don't just "rm -rf ${CHECKOUT_DIR}" because ${CHECKOUT_DIR} might be "/"
+                      # or the root of a mounted volume.
+                      if [ -d "${CHECKOUT_DIR}" ] ; then
+                        # Delete non-hidden files and directories
+                        rm -rf "${CHECKOUT_DIR:?}"/*
+                        # Delete files and directories starting with . but excluding ..
+                        rm -rf "${CHECKOUT_DIR}"/.[!.]*
+                        # Delete files and directories starting with .. plus any other character
+                        rm -rf "${CHECKOUT_DIR}"/..?*
+                      fi
+                    }
+                    
+                    if [ "${PARAM_DELETE_EXISTING}" = "true" ] ; then
+                      cleandir || true
+                    fi
+                    
+                    test -z "${PARAM_HTTP_PROXY}" || export HTTP_PROXY="${PARAM_HTTP_PROXY}"
+                    test -z "${PARAM_HTTPS_PROXY}" || export HTTPS_PROXY="${PARAM_HTTPS_PROXY}"
+                    test -z "${PARAM_NO_PROXY}" || export NO_PROXY="${PARAM_NO_PROXY}"
+                    
+                    git config --global --add safe.directory "${WORKSPACE_OUTPUT_PATH}"
+                    /ko-app/git-init \
+                      -url="${PARAM_URL}" \
+                      -revision="${PARAM_REVISION}" \
+                      -refspec="${PARAM_REFSPEC}" \
+                      -path="${CHECKOUT_DIR}" \
+                      -sslVerify="${PARAM_SSL_VERIFY}" \
+                      -submodules="${PARAM_SUBMODULES}" \
+                      -depth="${PARAM_DEPTH}" \
+                      -sparseCheckoutDirectories="${PARAM_SPARSE_CHECKOUT_DIRECTORIES}"
+                    cd "${CHECKOUT_DIR}"
+                    RESULT_SHA="$(git rev-parse HEAD)"
+                    EXIT_CODE="$?"
+                    if [ "${EXIT_CODE}" != 0 ] ; then
+                      exit "${EXIT_CODE}"
+                    fi
+                    RESULT_COMMITTER_DATE="$(git log -1 --pretty=%ct)"
+                    printf "%s" "${RESULT_COMMITTER_DATE}" > "$(results.committer-date.path)"
+                    printf "%s" "${RESULT_SHA}" > "$(results.commit.path)"
+                    printf "%s" "${PARAM_URL}" > "$(results.url.path)"
+                    
+                  securityContext:
+                    runAsGroup: 0
+                    runAsUser: 0
+              workspaces:
+                - description: The git repo will be cloned onto the volume backing this Workspace.
+                  name: output
+                - description: |
+                    A .ssh directory with private key, known_hosts, config, etc. Copied to
+                    the user's home before git commands are executed. Used to authenticate
+                    with the git remote when performing the clone. Binding a Secret to this
+                    Workspace is strongly recommended over other volume types.
+                    
+                  name: ssh-directory
+                  optional: true
+                - description: |
+                    A Workspace containing a .gitconfig and .git-credentials file. These
+                    will be copied to the user's home before any git commands are run. Any
+                    other files in this Workspace are ignored. It is strongly recommended
+                    to use ssh-directory over basic-auth whenever possible and to bind a
+                    Secret to this Workspace over other volume types.
+                    
+                  name: basic-auth
+                  optional: true
+                - description: |
+                    A workspace containing CA certificates, this will be used by Git to
+                    verify the peer with when fetching or pushing over HTTPS.
+                    
+                  name: ssl-ca-directory
+                  optional: true
+            workspaces:
+              - name: output
+                workspace: source-ws
+          - name: cloud-native-build
+            params:
+              - name: APP_IMAGE
+                value: $(params.APP_IMAGE_HOST)/$(params.APP_IMAGE_REPO):$(tasks.fetch-from-git.results.commit)
+              - name: SOURCE_SUBPATH
+                value: $(params.SOURCE_SUBPATH)
+              - name: PROCESS_TYPE
+                value: $(params.PROCESS_TYPE)
+              - name: ENV_VARS
+                value:
+                  - $(params.ENV_VARS)
+            runAfter:
+              - fetch-from-git
+            taskSpec:
+              description: The Buildpacks task builds source into a container image and pushes it to a registry, using Cloud Native Buildpacks.
+              params:
+                - description: The name of where to store the app image.
+                  name: APP_IMAGE
+                  type: string
+                - default: registry.k8s.com/paketobuildpacks/builder-jammy-base:0.4.265
+                  description: The image on which builds will run (must include lifecycle and compatible buildpacks).
+                  name: BUILDER_IMAGE
+                  type: string
+                - default: ''
+                  description: A subpath within the `source` input where the source to build is located.
+                  name: SOURCE_SUBPATH
+                  type: string
+                - default: []
+                  description: Environment variables to set during _build-time_.
+                  name: ENV_VARS
+                  type: array
+                - default: web
+                  description: The default process type to set on the image.
+                  name: PROCESS_TYPE
+                  type: string
+                - default: ''
+                  description: Reference to a run image to use.
+                  name: RUN_IMAGE
+                  type: string
+                - default: ''
+                  description: The name of the persistent app cache image (if no cache workspace is provided).
+                  name: CACHE_IMAGE
+                  type: string
+                - default: 'false'
+                  description: Do not write layer metadata or restore cached layers.
+                  name: SKIP_RESTORE
+                  type: string
+                - default: '1001'
+                  description: The user ID of the builder image user.
+                  name: USER_ID
+                  type: string
+                - default: '1000'
+                  description: The group ID of the builder image user.
+                  name: GROUP_ID
+                  type: string
+                - default: empty-dir
+                  description: The name of the platform directory.
+                  name: PLATFORM_DIR
+                  type: string
+              results:
+                - description: The digest of the built `APP_IMAGE`.
+                  name: APP_IMAGE_DIGEST
+                  type: string
+                - description: The URL of the built `APP_IMAGE`.
+                  name: APP_IMAGE_URL
+                  type: string
+              stepTemplate:
+                computeResources: {}
+                env:
+                  - name: CNB_PLATFORM_API
+                    value: '0.9'
+              steps:            
+                - args:
+                    - '--env-vars'
+                    - $(params.ENV_VARS[*])
+                  computeResources: {}
+                  image: docker.io/library/bash:5.1.4@sha256:b208215a4655538be652b2769d82e576bc4d0a2bb132144c060efc5be8c3f5d6
+                  name: prepare
+                  script: |
+                    #!/usr/bin/env bash
+                    set -e
+                    
+                    if [[ "$(workspaces.cache.bound)" == "true" ]]; then
+                      echo "> Setting permissions on '$(workspaces.cache.path)'..."
+                      chown -R "$(params.USER_ID):$(params.GROUP_ID)" "$(workspaces.cache.path)"
+                    fi
+                    
+                    for path in "/tekton/home" "/layers" "$(workspaces.source.path)"; do
+                      echo "> Setting permissions on '$path'..."
+                      chown -R "$(params.USER_ID):$(params.GROUP_ID)" "$path"
+                    
+                      if [[ "$path" == "$(workspaces.source.path)" ]]; then
+                          chmod 775 "$(workspaces.source.path)"
+                      fi
+                    done
+                    
+                    echo "> Parsing additional configuration..."
+                    parsing_flag=""
+                    envs=()
+                    for arg in "$@"; do
+                        if [[ "$arg" == "--env-vars" ]]; then
+                            echo "-> Parsing env variables..."
+                            parsing_flag="env-vars"
+                        elif [[ "$parsing_flag" == "env-vars" ]]; then
+                            envs+=("$arg")
+                        fi
+                    done
+                    
+                    echo "> Processing any environment variables..."
+                    ENV_DIR="/platform/env"
+                    
+                    echo "--> Creating 'env' directory: $ENV_DIR"
+                    mkdir -p "$ENV_DIR"
+                    
+                    for env in "${envs[@]}"; do
+                        IFS='=' read -r key value <<< "$env"
+                        if [[ "$key" != "" && "$value" != "" ]]; then
+                            path="${ENV_DIR}/${key}"
+                            echo "--> Writing ${path}..."
+                            echo -n "$value" > "$path"
+                        fi
+                    done
+                    
+                  volumeMounts:
+                    - mountPath: /layers
+                      name: layers-dir
+                    - mountPath: /platform
+                      name: $(params.PLATFORM_DIR)
+                - args:
+                    - '-app=$(workspaces.source.path)/$(params.SOURCE_SUBPATH)'
+                    - '-cache-dir=$(workspaces.cache.path)'
+                    - '-cache-image=$(params.CACHE_IMAGE)'
+                    - '-uid=$(params.USER_ID)'
+                    - '-gid=$(params.GROUP_ID)'
+                    - '-layers=/layers'
+                    - '-platform=/platform'
+                    - '-report=/layers/report.toml'
+                    - '-process-type=$(params.PROCESS_TYPE)'
+                    - '-skip-restore=$(params.SKIP_RESTORE)'
+                    - '-previous-image=$(params.APP_IMAGE)'
+                    - '-run-image=$(params.RUN_IMAGE)'
+                    - $(params.APP_IMAGE)
+                  command:
+                    - /cnb/lifecycle/creator
+                  computeResources: {}
+                  env:
+                    - name: DOCKER_CONFIG
+                      value: $(workspaces.dockerconfig.path)
+                  image: $(params.BUILDER_IMAGE)
+                  imagePullPolicy: Always
+                  name: create
+                  securityContext:
+                    runAsGroup: 1000
+                    runAsUser: 1001
+                  volumeMounts:
+                    - mountPath: /layers
+                      name: layers-dir
+                    - mountPath: /platform
+                      name: $(params.PLATFORM_DIR)
+                - computeResources: {}
+                  image: docker.io/library/bash:5.1.4@sha256:b208215a4655538be652b2769d82e576bc4d0a2bb132144c060efc5be8c3f5d6
+                  name: results
+                  script: |
+                    #!/usr/bin/env bash
+                    set -e
+                    grep "digest" /layers/report.toml | cut -d'"' -f2 | cut -d'"' -f2 | tr -d '\n' | tee "$(results.APP_IMAGE_DIGEST.path)"
+                    echo -n "$(params.APP_IMAGE)" | tee "$(results.APP_IMAGE_URL.path)"
+                    
+                  volumeMounts:
+                    - mountPath: /layers
+                      name: layers-dir
+              volumes:
+                - emptyDir: {}
+                  name: empty-dir
+                - emptyDir: {}
+                  name: layers-dir
+              workspaces:
+                - description: Directory where application source is located.
+                  name: source
+                - description: Directory where cache is stored (when no cache image is provided).
+                  name: cache
+                  optional: true
+                - description: An optional workspace that allows providing a .docker/config.json file for Buildpacks lifecycle binary to access the container registry. The file should be placed at the root of the Workspace with name config.json.
+                  name: dockerconfig
+                  optional: true
+            when:
+              - input: $(params.BUILD_TYPE)
+                operator: in
+                values:
+                  - '0'
+            workspaces:
+              - name: source
+                workspace: source-ws
+              - name: cache
+                workspace: cache-ws
+              - name: dockerconfig
+                workspace: dockerconfig-ws                 
+          - name: dockerfile-build
+            params:
+              - name: IMAGE
+                value: $(params.APP_IMAGE_HOST)/$(params.APP_IMAGE_REPO):$(tasks.fetch-from-git.results.commit)
+              - name: CONTEXT
+                value: $(params.SOURCE_SUBPATH)
+              - name: DOCKERFILE
+                value: $(params.DOCKERFILE)
+              - name: EXTRA_ARGS
+                value:
+                  - $(params.EXTRA_ARGS)
+            runAfter:
+              - fetch-from-git
+            taskSpec:
+              description: This Task builds a simple Dockerfile with kaniko and pushes to a registry. This Task stores the image name and digest as results, allowing Tekton Chains to pick up that an image was built & sign it.
+              params:
+                - description: Name (reference) of the image to build.
+                  name: IMAGE
+                  type: string
+                - default: ./Dockerfile
+                  description: Path to the Dockerfile to build.
+                  name: DOCKERFILE
+                  type: string
+                - default: ./
+                  description: The build context used by Kaniko.
+                  name: CONTEXT
+                  type: string
+                - default: []
+                  name: EXTRA_ARGS
+                  type: array
+                - default: registry.k8s.com/kaniko-project/executor:v1.5.1
+                  description: The image on which builds will run (default is v1.5.1)
+                  name: BUILDER_IMAGE
+                  type: string
+              results:
+                - description: Digest of the image just built.
+                  name: IMAGE_DIGEST
+                  type: string
+                - description: URL of the image just built.
+                  name: IMAGE_URL
+                  type: string
+              steps:
+                - args:
+                    - $(params.EXTRA_ARGS)
+                    - '--dockerfile=$(params.DOCKERFILE)'
+                    - '--context=$(workspaces.source.path)/$(params.CONTEXT)'
+                    - '--destination=$(params.IMAGE)'
+                    - '--digest-file=$(results.IMAGE_DIGEST.path)'
+                  command:
+                    - /kaniko/executor
+                  computeResources: {}
+                  image: $(params.BUILDER_IMAGE)
+                  name: build-and-push
+                  securityContext:
+                    runAsUser: 0
+                  workingDir: $(workspaces.source.path)
+                - computeResources: {}
+                  image: docker.io/library/bash:5.1.4@sha256:c523c636b722339f41b6a431b44588ab2f762c5de5ec3bd7964420ff982fb1d9
+                  name: write-url
+                  script: |
+                    set -e
+                    image="$(params.IMAGE)"
+                    echo -n "${image}" | tee "$(results.IMAGE_URL.path)"
+                    
+              workspaces:
+                - description: Holds the context and Dockerfile
+                  name: source
+                - description: Includes a docker `config.json`
+                  mountPath: /kaniko/.docker
+                  name: dockerconfig
+                  optional: true
+            when:
+              - input: $(params.BUILD_TYPE)
+                operator: in
+                values:
+                  - '1'
+            workspaces:
+              - name: source
+                workspace: source-ws
+              - name: dockerconfig
+                workspace: dockerconfig-ws                
+        finally:
+          - name: artifacts-producer-for-cnb
+            params:
+              - name: APP_IMAGE_URL
+                value: "$(tasks.cloud-native-build.results.APP_IMAGE_URL)"
+              - name: APP_IMAGE_DIGEST
+                value: "$(tasks.cloud-native-build.results.APP_IMAGE_DIGEST)"
+              - name: APP_IMAGE_TAG
+                value: "$(tasks.fetch-from-git.results.commit)"                                                                                       
+            taskSpec:
+              description: |
+                      A simple task that populates artifacts to TaskRun result
+              params:
+                - name: APP_IMAGE_URL
+                - name: APP_IMAGE_DIGEST
+                - name: APP_IMAGE_TAG                            
+              results:
+                - description: artifact info.
+                  name: ArtifactInfo
+                  type: string       
+              steps:
+                - name: emitting-artifacts
+                  image: docker.io/library/bash:5.1.4@sha256:c523c636b722339f41b6a431b44588ab2f762c5de5ec3bd7964420ff982fb1d9
+                  script: |
+                    cat > $(results.ArtifactInfo.path) << EOF
+                    {
+                      "description":"基于源码构建通过云原生方式生成",
+                      "outputs":[
+                        {
+                          "name":"{{ .Release.BuilderName }}",
+                          "producer":"cnb",
+                          "type":"oci",
+                          "format":"image",
+                          "url":"pkg:oci/{{ if .Release.OciRegistry.Group }}{{ .Release.OciRegistry.Group }}/{{ end }}{{ .Release.Workspace }}/{{ .Release.Namespace }}/{{ .Release.BuilderName }}@$(params.APP_IMAGE_TAG)?repository_url={{ .Release.OciRegistry.Host }}",
+                          "digest":"$(params.APP_IMAGE_DIGEST)",
+                          "displayName":"$(params.APP_IMAGE_URL)",
+                          "description":""
+                        }
+                      ]
+                    }
+                    EOF
+          - name: artifacts-producer-for-df
+            params:
+              - name: IMAGE_URL
+                value: "$(tasks.dockerfile-build.results.IMAGE_URL)"
+              - name: IMAGE_DIGEST
+                value: "$(tasks.dockerfile-build.results.IMAGE_DIGEST)"
+              - name: IMAGE_TAG
+                value: "$(tasks.fetch-from-git.results.commit)"                                                                                                    
+            taskSpec:
+              description: |
+                      A simple task that populates artifacts to TaskRun result
+              params:
+                - name: IMAGE_URL
+                - name: IMAGE_DIGEST
+                - name: IMAGE_TAG                         
+              results:
+                - description: artifact info.
+                  name: ArtifactInfo
+                  type: string       
+              steps:
+                - name: emitting-artifacts
+                  image: docker.io/library/bash:5.1.4@sha256:c523c636b722339f41b6a431b44588ab2f762c5de5ec3bd7964420ff982fb1d9
+                  script: |
+                    cat > $(results.ArtifactInfo.path) << EOF
+                    {
+                      "description":"基于源码构建通过dockerfile方式生成",
+                      "outputs":[
+                        {
+                          "name":"{{ .Release.BuilderName }}",
+                          "producer":"df",
+                          "type":"oci",
+                          "format":"image",
+                          "url":"pkg:oci/{{ if .Release.OciRegistry.Group }}{{ .Release.OciRegistry.Group }}/{{ end }}{{ .Release.Workspace }}/{{ .Release.Namespace }}/{{ .Release.BuilderName }}@$(params.IMAGE_TAG)?repository_url={{ .Release.OciRegistry.Host }}",
+                          "digest":"$(params.IMAGE_DIGEST)",
+                          "displayName":"$(params.IMAGE_URL)",
+                          "description":""
+                        }
+                      ]
+                    }
+                    EOF
+        results:
+          - name: shipper-artifacts-cnb
+            value: $(finally.artifacts-producer-for-cnb.results.ArtifactInfo)
+          - name: shipper-artifacts-df
+            value: $(finally.artifacts-producer-for-df.results.ArtifactInfo)                                                          
+        workspaces:
+          - description: Location where source is stored.
+            name: source-ws
+          - description: Location where cache is stored if CACHE_IMAGE is not provided.
+            name: cache-ws
+            optional: true 
+          - name: dockerconfig-ws
+            description: An optional workspace that allows providing a .docker/config.json.
+            optional: true                                       
+      workspaces:
+        - name: source-ws
+          volumeClaimTemplate:
+            metadata:
+              name: builder-s2i
+              labels:
+                pvc.ws.shipper.lingbohome.com/auto-delete: 'yes'
+                pvc.ws.shipper.lingbohome.com/delete-strategy: 'always'
+                shipper.lingbohome.com/pipeline: {{ .Release.PipelineName | quote }}               
+            spec:
+              accessModes:
+                - ReadWriteOnce
+              resources:
+                requests:
+                  storage: 500Mi
+          subPath: builder-ws/{{ .Release.BuilderName }}
+          {{- if .Release.OciRegistry.Credentials }}
+        - name: dockerconfig-ws
+          secret:
+            secretName: {{ .Release.OciRegistry.Credentials }}
+          {{- end }} 
+  values.yaml: |
+    buildType: "0"
+  values.schema.json: |
+    {
+      "properties": {
+        "buildType": {
+          "description": "容器镜像的构建方式，支持传统的dockerfile和云原生构建两种方式",
+          "title": "构建方式",
+          "type": "string",
+          "enum": [{
+              "label": "云原生",
+              "value": "0"
+            },
+            {
+              "label": "Dockerfile",
+              "value": "1"
+            }
+          ]
+        },
+        "sourceUrl": {
+          "title": "代码仓库地址",
+          "description": "一个代码仓库git url地址，目前仅支持公开仓库",
+          "type": "string",
+          "x-shipper-ui": {
+            "placeholder": "github、gitlab、gitee都可以，只要平台可以顺利访问"
+          }
+        },
+        "sourceRef": {
+          "title": "代码分支",
+          "description": "指定要构建的分支、Tag、Sha等",
+          "type": "string",
+          "x-shipper-ui": {
+            "placeholder": "没有指定时，默认为”“，即表示按照代码仓库设定的默认分支构建"
+          }
+        },
+        "sourceSubPath": {
+          "title": "构建上下文",
+          "description": "指定代码仓库下的目录作为构建上下文",
+          "type": "string",
+          "x-shipper-ui": {
+            "placeholder": "没有指定时，默认为代码根目录”./“"
+          }
+        },
+        "sourceDockerfilePath": {
+          "title": "Dockerfile文件路径",
+          "description": "指定代码仓库下Dockerfile文件的路径",
+          "type": "string",
+          "x-shipper-ui": {
+            "placeholder": "没有指定时，默认为代码根目录下名为”./Dockerfile“的文件",
+            "visibleIf":{
+              "buildType":"1"
+            }
+          }
+        }
+      },
+      "order": [
+        "buildType",
+        "sourceUrl",
+        "sourceRef",
+        "sourceSubPath",
+        "sourceDockerfilePath"
+      ],
+      "required": [
+        "sourceUrl",
+        "buildType"
+      ],
+      "title": "Values",
+      "type": "object"
+    }    

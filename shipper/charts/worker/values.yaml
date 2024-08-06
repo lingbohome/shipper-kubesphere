@@ -1,4 +1,7 @@
 
+global:
+  namespace: "shipper-system"
+
 image:
   registry: registry.cn-shanghai.aliyuncs.com/kube-shipper
   controller:

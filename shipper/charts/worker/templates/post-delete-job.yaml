@@ -1,8 +1,8 @@
-{{- if .Values.namespace }}
+{{- if .Values.global.namespace }}
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: "{{ .Release.Name }}-post-delete"
+  name: "{{ .Release.Name }}-worker-post-delete"
   annotations:
     helm.sh/hook: post-delete
     helm.sh/hook-weight: "1"
@@ -18,7 +18,8 @@ spec:
             - "/bin/bash"
             - "-c"
             - |
-              if kubectl get ns {{ .Values.namespace }}; then
-                kubectl delete ns {{ .Values.namespace }}
+              if kubectl get ns tekton-pipelines; then
+                kubectl delete ns tekton-pipelines
               fi
+
 {{- end }}
