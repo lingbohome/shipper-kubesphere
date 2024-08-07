@@ -30,7 +30,7 @@ provider:
     name: "lingbohome"
     email: "lingbo@lingbohome.com"
     url: "https://github.com/lingbohome"
-icon: ./static/favicon.svg
+icon: ./static/logo-color.png
 screenshots:
   - ./static/screenshots/screenshot.png
 dependencies:
