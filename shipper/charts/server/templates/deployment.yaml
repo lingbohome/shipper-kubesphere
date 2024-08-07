@@ -35,11 +35,41 @@ spec:
           image: "{{ .Values.image.registry }}/{{ .Values.image.server.repository }}:{{ .Values.image.server.tag | default .Chart.AppVersion }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           env:
-            - name: Shipper
-              value: xxx
+            - name: SHIPPER_Identity_Authority
+              value: {{ .Values.server.envs.Identity_Authority | quote }}
+            - name: SHIPPER_Oci_Registry_Host
+              value: {{ .Values.server.envs.Oci_Registry_Host | quote }}
+            - name: SHIPPER_Oci_Registry_Username
+              value: {{ .Values.server.envs.Oci_Registry_Username | quote }}
+            - name: SHIPPER_Oci_Registry_Password
+              value: {{ .Values.server.envs.Oci_Registry_Password | quote }}
+            - name: SHIPPER_Oci_Registry_Token
+              value: {{ .Values.server.envs.Oci_Registry_Token | quote }}
+            - name: SHIPPER_Oci_Registry_Group
+              value: {{ .Values.server.envs.Oci_Registry_Group | quote }}
+            - name: SHIPPER_Oci_Registry_Credentials
+              value: {{ .Values.server.envs.Oci_Registry_Credentials | quote }}                                                                                      
           ports:
             - containerPort: 5000
               protocol: TCP
+              name: http
+            - containerPort: 5001
+              protocol: TCP
+              name: https   
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: 5000
+            timeoutSeconds: 90
+            initialDelaySeconds: 5
+            periodSeconds: 40
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 5000
+            timeoutSeconds: 90
+            initialDelaySeconds: 60
+            periodSeconds: 120              
           resources:
             {{- toYaml .Values.server.resources | nindent 12 }}
       {{- with .Values.server.nodeSelector }}

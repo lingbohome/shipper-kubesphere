@@ -1,8 +1,5 @@
 ui:
   enabled: false
-  image:
-    repository: kubespheredev/shipper-frontend
-    tag: latest
 
 worker:
   enabled: true
