@@ -6,7 +6,7 @@ image:
   registry: registry.cn-shanghai.aliyuncs.com/kube-shipper
   controller:
     repository: tektoncd-pipeline-controller
-    tag: v0.54.0
+    tag: v0.54.2
   event:
     repository: tektoncd-pipeline-events
     tag: v0.54.0

@@ -150,7 +150,7 @@
                     description: Log the commands that are executed during `git-clone`'s operation.
                     name: verbose
                     type: string
-                  - default: registry.k8s.com/tekton-releases/github.com/tektoncd/pipeline/cmd/git-init:v0.40.2
+                  - default: registry.cn-shanghai.aliyuncs.com/kube-shipper/tektoncd-pipeline-cmd-git-init:v0.40.2
                     description: The image providing the git-init binary that this Task runs.
                     name: gitInitImage
                     type: string
@@ -345,7 +345,7 @@
                   - description: The name of where to store the app image.
                     name: APP_IMAGE
                     type: string
-                  - default: registry.k8s.com/paketobuildpacks/builder-jammy-base:0.4.265
+                  - default: registry.cn-shanghai.aliyuncs.com/kube-shipper/paketo-cnb-builder-jammy-base:0.4.265
                     description: The image on which builds will run (must include lifecycle and compatible buildpacks).
                     name: BUILDER_IMAGE
                     type: string
@@ -361,7 +361,7 @@
                     description: The default process type to set on the image.
                     name: PROCESS_TYPE
                     type: string
-                  - default: ''
+                  - default: 'registry.cn-shanghai.aliyuncs.com/kube-shipper/paketo-cnb-run-jammy-base:0.1.94'
                     description: Reference to a run image to use.
                     name: RUN_IMAGE
                     type: string
@@ -402,7 +402,7 @@
                       - '--env-vars'
                       - $(params.ENV_VARS[*])
                     computeResources: {}
-                    image: docker.io/library/bash:5.1.4@sha256:b208215a4655538be652b2769d82e576bc4d0a2bb132144c060efc5be8c3f5d6
+                    image: registry.cn-shanghai.aliyuncs.com/kube-shipper/bash:5.1.4
                     name: prepare
                     script: |
                       #!/usr/bin/env bash
@@ -486,7 +486,7 @@
                       - mountPath: /platform
                         name: $(params.PLATFORM_DIR)
                   - computeResources: {}
-                    image: docker.io/library/bash:5.1.4@sha256:b208215a4655538be652b2769d82e576bc4d0a2bb132144c060efc5be8c3f5d6
+                    image: registry.cn-shanghai.aliyuncs.com/kube-shipper/bash:5.1.4
                     name: results
                     script: |
                       #!/usr/bin/env bash
@@ -553,7 +553,7 @@
                   - default: []
                     name: EXTRA_ARGS
                     type: array
-                  - default: registry.k8s.com/kaniko-project/executor:v1.5.1
+                  - default: registry.cn-shanghai.aliyuncs.com/kube-shipper/kaniko-project-executor:v1.5.1
                     description: The image on which builds will run (default is v1.5.1)
                     name: BUILDER_IMAGE
                     type: string
@@ -580,7 +580,7 @@
                       runAsUser: 0
                     workingDir: $(workspaces.source.path)
                   - computeResources: {}
-                    image: docker.io/library/bash:5.1.4@sha256:c523c636b722339f41b6a431b44588ab2f762c5de5ec3bd7964420ff982fb1d9
+                    image: registry.cn-shanghai.aliyuncs.com/kube-shipper/bash:5.1.4
                     name: write-url
                     script: |
                       set -e
@@ -626,7 +626,7 @@
                     type: string       
                 steps:
                   - name: emitting-artifacts
-                    image: docker.io/library/bash:5.1.4@sha256:c523c636b722339f41b6a431b44588ab2f762c5de5ec3bd7964420ff982fb1d9
+                    image: registry.cn-shanghai.aliyuncs.com/kube-shipper/bash:5.1.4
                     script: |
                       cat > $(results.ArtifactInfo.path) << EOF
                       {
@@ -666,7 +666,7 @@
                     type: string       
                 steps:
                   - name: emitting-artifacts
-                    image: docker.io/library/bash:5.1.4@sha256:c523c636b722339f41b6a431b44588ab2f762c5de5ec3bd7964420ff982fb1d9
+                    image: registry.cn-shanghai.aliyuncs.com/kube-shipper/bash:5.1.4
                     script: |
                       cat > $(results.ArtifactInfo.path) << EOF
                       {

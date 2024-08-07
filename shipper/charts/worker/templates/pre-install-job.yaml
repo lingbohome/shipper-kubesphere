@@ -13,7 +13,7 @@ spec:
       restartPolicy: Never
       containers:
         - name: pre-install-job
-          image: "kubesphere/kubectl:v1.27.4"
+          image: "registry.cn-shanghai.aliyuncs.com/kube-shipper/kubectl:v1.27.4"
           command: ["/bin/bash","-c","\n
             for NS in shipper-system tekton-pipelines; \n
             do \n
