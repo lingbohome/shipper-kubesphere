@@ -32,7 +32,13 @@ provider:
     url: "https://github.com/lingbohome"
 icon: ./static/logo-color.png
 screenshots:
-  - ./static/screenshots/screenshot.png
+  - ./static/screenshots/screenshot01.png
+  - ./static/screenshots/screenshot02.png
+  - ./static/screenshots/screenshot03.png
+  - ./static/screenshots/screenshot04.jpg
+  - ./static/screenshots/screenshot05.png
+  - ./static/screenshots/screenshot06.png
+  - ./static/screenshots/screenshot07.png            
 dependencies:
   - name: ui
     tags:
