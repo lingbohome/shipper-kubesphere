@@ -1,0 +1,11 @@
+apiVersion: v2
+name: builtin
+description: builtin of shipper template store.
+type: application
+version: 0.1.0
+appVersion: "0.1.0"
+home: https://github.com/lingbohome
+sources:
+  - https://github.com/lingbohome
+annotations:
+  shipper.lingbohome.com/template-store: builtin

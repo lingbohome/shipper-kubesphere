@@ -16,7 +16,7 @@ spec:
           image: "registry.cn-shanghai.aliyuncs.com/kube-shipper/kubectl:v1.27.4"
           command: ["/bin/bash","-c","\n
           if kubectl get namespace shipper-system &>/dev/null; then \n
-            kubectl label ns shipper-system kubesphere.io/workspace=system-workspace
+            kubectl label ns shipper-system kubesphere.io/workspace=system-workspace \n
             echo 'Namespace shipper-system already exists. Skipping...' \n
           else \n
             kubectl create namespace shipper-system && kubectl label ns shipper-system kubesphere.io/workspace=system-workspace \n

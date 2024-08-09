@@ -35,19 +35,19 @@ spec:
           image: "{{ .Values.image.registry }}/{{ .Values.image.server.repository }}:{{ .Values.image.server.tag | default .Chart.AppVersion }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           env:
-            - name: SHIPPER_Identity_Authority
+            - name: SHIPPER_IDENTITY_AUTHORITY
               value: {{ .Values.server.envs.Identity_Authority | quote }}
-            - name: SHIPPER_Oci_Registry_Host
+            - name: SHIPPER_OCI_REGISTRY_HOST
               value: {{ .Values.server.envs.Oci_Registry_Host | quote }}
-            - name: SHIPPER_Oci_Registry_Username
+            - name: SHIPPER_OCI_REGISTRY_USERNAME
               value: {{ .Values.server.envs.Oci_Registry_Username | quote }}
-            - name: SHIPPER_Oci_Registry_Password
+            - name: SHIPPER_OCI_REGISTRY_PASSWORD
               value: {{ .Values.server.envs.Oci_Registry_Password | quote }}
-            - name: SHIPPER_Oci_Registry_Token
+            - name: SHIPPER_OCI_REGISTRY_TOKEN
               value: {{ .Values.server.envs.Oci_Registry_Token | quote }}
-            - name: SHIPPER_Oci_Registry_Group
+            - name: SHIPPER_OCI_REGISTRY_GROUP
               value: {{ .Values.server.envs.Oci_Registry_Group | quote }}
-            - name: SHIPPER_Oci_Registry_Credentials
+            - name: SHIPPER_OCI_REGISTRY_CREDENTIALS
               value: {{ .Values.server.envs.Oci_Registry_Credentials | quote }}                                                                                      
           ports:
             - containerPort: 5000

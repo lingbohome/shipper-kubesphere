@@ -11,28 +11,30 @@ rules:
     apiGroups:
       - 'shipper.lingbohome.com'
     resources:
-      - '*' 
+      - '*'       
   - apiGroups:
-    - authentication.k8s.io
+      - 'apiextensions.k8s.io'
     resources:
-    - tokenreviews
+      - 'customresourcedefinitions'
     verbs:
-    - create
+      - '*'
   - apiGroups:
-    - authorization.k8s.io
+      - ''
+      - 'apps'
+      - 'batch'
+      - 'app.k8s.io'
+      - 'autoscaling'
+      - 'rbac.authorization.k8s.io'
     resources:
-    - subjectaccessreviews
+      - '*'
     verbs:
-    - create        
-  - apiGroups:
-      - ""
-    resources:
-      - secrets
-      - configmaps
-      - pods
-      - persistentvolumeclaims 
-    verbs:
-      - "*"             
+      - '*'
+  - apiGroups: 
+      - 'admissionregistration.k8s.io'
+    resources: 
+      - '*'
+    verbs: 
+      - '*'                             
 
 ---
 kind: Role
@@ -60,9 +62,9 @@ rules:
     - patch
     - delete
   - apiGroups:
-    - ""
+      - 'networking.k8s.io'
     resources:
-    - events
+      - 'ingresses'
+      - 'networkpolicies'
     verbs:
-    - create
-    - patch
+      - '*'

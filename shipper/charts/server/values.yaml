@@ -41,7 +41,7 @@ server:
     Oci_Registry_Username: "" 
     Oci_Registry_Password: ""
     Oci_Registry_Token: ""
-    Oci_Registry_Group: ""
+    Oci_Registry_Group: "shipper-artifacts"
     Oci_Registry_Credentials: ""  
 
   service:
