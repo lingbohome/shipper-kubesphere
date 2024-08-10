@@ -46,11 +46,12 @@ data:
         - name: DOCKERFILE
           value: {{ .Values.sourceDockerfilePath | default "./Dockerfile" }}
         - name: ENV_VARS
-          value: []
+          value:
+            - BP_DEPENDENCY_MIRROR_ARTIFACTS_PAKETO_IO=https://mirror.lingbohome.com/{originalHost}
         - name: EXTRA_ARGS
           value: []
         - name: PROCESS_TYPE
-          value: web
+          value: ''
       pipelineSpec:
         description: The S2I pipeline builds source from a Git repository into a container image and pushes it to a registry.
         params:
