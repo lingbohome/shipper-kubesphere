@@ -1,6 +1,6 @@
 apiVersion: kubesphere.io/v1alpha1
 name: shipper
-version: 0.1.0
+version: 0.1.1
 displayName:
   zh: 云交付
   en: shipper
@@ -16,7 +16,7 @@ home: https://github.com/lingbohome
 sources:
   - https://github.com/lingbohome
 kubeVersion: ">=1.20.0-0"
-ksVersion: ">=4.0.0-0"
+ksVersion: ">=4.1.2-0"
 maintainers:
   - name: "lingbohome"
     email: "lingbo@lingbohome.com"
@@ -32,13 +32,13 @@ provider:
     url: "https://github.com/lingbohome"
 icon: ./static/logo-color.png
 screenshots:
-  - ./static/screenshots/screenshot01.png
-  - ./static/screenshots/screenshot02.png
-  - ./static/screenshots/screenshot03.png
-  - ./static/screenshots/screenshot04.jpg
-  - ./static/screenshots/screenshot05.png
-  - ./static/screenshots/screenshot06.png
-  - ./static/screenshots/screenshot07.png            
+  - https://ks-extension.pek3b.qingstor.com/users/521011425250962205/shipper/0.1.0/screenshot01.jpg
+  - https://ks-extension.pek3b.qingstor.com/users/521011425250962205/shipper/0.1.0/screenshot02.png
+  - https://ks-extension.pek3b.qingstor.com/users/521011425250962205/shipper/0.1.0/screenshot03.png
+  - https://ks-extension.pek3b.qingstor.com/users/521011425250962205/shipper/0.1.0/screenshot04.png
+  - https://ks-extension.pek3b.qingstor.com/users/521011425250962205/shipper/0.1.0/screenshot05.png
+  - https://ks-extension.pek3b.qingstor.com/users/521011425250962205/shipper/0.1.0/screenshot06.png
+  - https://ks-extension.pek3b.qingstor.com/users/521011425250962205/shipper/0.1.0/screenshot07.png            
 dependencies:
   - name: ui
     tags:

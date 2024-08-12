@@ -1,14 +1,14 @@
-云交付（Shipper）是面向未来的云原生构建与交付平台，基于平台工程理念自助式、开箱即用的云原生 DevOps 平台，致力于让云原生应用的构建与交付，变得更简单、更高效，同时赋能产研、交付运维一体化高效协作，助力企业产品的业务价值快速高质量的交付给客户。
+Cloud Delivery (Shipper) is a future-oriented cloud-native building and delivery platform, based on the platform engineering concept of self-service and out-of-the-box cloud-native DevOps platform. It is committed to making the construction and delivery of cloud-native applications simpler and more efficient, while empowering integrated and efficient collaboration between production research, delivery, and operations, helping enterprises quickly and high-quality deliver the business value of products to customers.
 
-主要特性：
+Key Features:
 
-1. 高度灵活易用易扩展的构建器，开箱即用，无需任何配置。
-2. 社区驱动共建丰富生态，共享可重用、功能多样性的模板
-3. 平台内置部分实用模板，由平台驱动维护，不定期更新和上线更多实用模板。
-4. 高效协作，关注点分离，产研团队使用模板完成自己的需求，运维架构团队提供不同自定义模板功能的支持。
-5. 支持触发器，轻松与第三方系统集成，同时支持cron表达式定时执行。
-6. 多类型制品管理，支持文本类型制品在线预览
-7. 基于平台工程理念的自服务式应用全生命周期管理，包括但不限于（版本化，发布，部署、运维，监控，打包交付），无需了解底层技术细节，即可轻松交付业务价值，减轻用户的使用负担。
-8. 基于kubesphere天生的多租户能力，团队之间资源隔离，互不干扰
-9. 管理端全局效能洞察看板，提供分析各维度效能度量数据、成本分析数据
-10. 信创支持能力，助力企业高效高质量交付信创应用
+1. Highly flexible, easy-to-use, and scalable builders that are out-of-the-box and require no configuration.
+2. Community-driven co-construction of a rich ecosystem, sharing reusable and diverse templates.
+3. The platform includes some practical templates, maintained by the platform, with regular updates and the launch of more practical templates.
+4. Efficient collaboration, focus separation, production research teams use templates to meet their own needs, and operation and architecture teams provide support for different custom template functions.
+5. Supports triggers, easy integration with third-party systems, and supports cron expression scheduling.
+6. Multi-type artifact management, supports online preview of text-type artifacts.
+7. Self-service application full-lifecycle management based on the platform engineering concept, including but not limited to (versioning, release, deployment, operation and maintenance, monitoring, packaging and delivery), allowing easy delivery of business value without the need to understand underlying technical details, reducing user burden.
+8. Based on the inherent multi-tenant capability of kubesphere, resource isolation between teams, no interference.
+9. Management-side global performance insight dashboard, providing analysis of various dimensions of performance metrics data and cost analysis data.
+10. Innovative support capabilities, helping enterprises deliver innovative applications efficiently and with high quality.

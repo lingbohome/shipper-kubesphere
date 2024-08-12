@@ -1,0 +1,1 @@
+The initial version of Shipper natively adapts to KubeSphere in the form of extension components, supporting cloud-native builders
