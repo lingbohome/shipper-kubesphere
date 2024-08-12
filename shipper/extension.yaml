@@ -1,6 +1,6 @@
 apiVersion: kubesphere.io/v1alpha1
 name: shipper
-version: 0.1.1
+version: 0.1.2
 displayName:
   zh: 云交付
   en: shipper
@@ -32,10 +32,10 @@ provider:
     url: "https://github.com/lingbohome"
 icon: ./static/logo-color.png
 screenshots:
-  - https://ks-extension.pek3b.qingstor.com/users/521011425250962205/shipper/0.1.0/screenshot01.jpg
+  - https://ks-extension.pek3b.qingstor.com/users/521011425250962205/shipper/0.1.0/screenshot01.png
   - https://ks-extension.pek3b.qingstor.com/users/521011425250962205/shipper/0.1.0/screenshot02.png
   - https://ks-extension.pek3b.qingstor.com/users/521011425250962205/shipper/0.1.0/screenshot03.png
-  - https://ks-extension.pek3b.qingstor.com/users/521011425250962205/shipper/0.1.0/screenshot04.png
+  - https://ks-extension.pek3b.qingstor.com/users/521011425250962205/shipper/0.1.0/screenshot04.jpg
   - https://ks-extension.pek3b.qingstor.com/users/521011425250962205/shipper/0.1.0/screenshot05.png
   - https://ks-extension.pek3b.qingstor.com/users/521011425250962205/shipper/0.1.0/screenshot06.png
   - https://ks-extension.pek3b.qingstor.com/users/521011425250962205/shipper/0.1.0/screenshot07.png            
