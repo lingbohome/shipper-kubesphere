@@ -11,6 +11,7 @@ spec:
   template:
     spec:
       restartPolicy: Never
+      serviceAccountName: helm-executor.shipper
       containers:
         - name: post-delete-job
           image: "registry.cn-shanghai.aliyuncs.com/kube-shipper/kubectl:v1.27.4"

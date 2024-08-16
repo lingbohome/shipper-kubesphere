@@ -1,0 +1,42 @@
+{{- if .Values.namespace }}
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: helm-executor.shipper
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "extension.labels" . | nindent 4 }}
+
+---
+
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: shipper-helm-hook-rbac
+  labels:
+    {{- include "extension.labels" . | nindent 4 }}
+rules:
+- apiGroups:
+    - ''
+  resources:
+    - 'namespaces'
+  verbs:
+    - '*'           
+
+---
+kind: ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: shipper-helm-hook-rbac
+  labels:
+    {{- include "extension.labels" . | nindent 4 }}
+subjects:
+  - kind: ServiceAccount
+    name: helm-executor.shipper
+    namespace: {{ .Release.Namespace }}
+roleRef:
+  kind: ClusterRole
+  name: shipper-helm-hook-rbac
+  apiGroup: rbac.authorization.k8s.io
+
+{{- end }}

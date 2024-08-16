@@ -24,4 +24,4 @@
 - 昵称：凌波（lingbohome）
 - 邮箱：lingbo@lingbohome.com
 - github主页：https://github.com/lingbohome
-- 个人简介: 多年的云原生 devops 平台设计开发经验，k8s容器云平台设计开发经验
+- 个人简介: 多年的云原生 devops 平台设计开发经验，k8s 容器云平台设计开发经验
