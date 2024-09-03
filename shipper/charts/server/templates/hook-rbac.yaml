@@ -4,6 +4,8 @@ kind: ServiceAccount
 metadata:
   name: helm-executor.shipper
   namespace: {{ .Release.Namespace }}
+  annotations:
+    helm.sh/hook: pre-install  
   labels:
     {{- include "extension.labels" . | nindent 4 }}
 
@@ -13,6 +15,8 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
   name: shipper-helm-hook-rbac
+  annotations:
+    helm.sh/hook: pre-install  
   labels:
     {{- include "extension.labels" . | nindent 4 }}
 rules:
@@ -28,6 +32,8 @@ kind: ClusterRoleBinding
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   name: shipper-helm-hook-rbac
+  annotations:
+    helm.sh/hook: pre-install  
   labels:
     {{- include "extension.labels" . | nindent 4 }}
 subjects:

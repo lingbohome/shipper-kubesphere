@@ -44,9 +44,7 @@ spec:
               ciEngine:
                 type: string
               params:
-                additionalProperties:
-                  type: string
-                type: object
+                x-kubernetes-preserve-unknown-fields: true
               templateRef:
                 properties:
                   name:

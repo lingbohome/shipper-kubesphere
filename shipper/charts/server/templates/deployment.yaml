@@ -48,7 +48,23 @@ spec:
             - name: SHIPPER_OCI_REGISTRY_GROUP
               value: {{ .Values.server.envs.Oci_Registry_Group | quote }}
             - name: SHIPPER_OCI_REGISTRY_CREDENTIALS
-              value: {{ .Values.server.envs.Oci_Registry_Credentials | quote }}                                                                                      
+              value: {{ .Values.server.envs.Oci_Registry_Credentials | quote }}
+            - name: SHIPPER_OSS_S3_ENDPOINT
+              value: {{ .Values.server.envs.Oss_S3_Endpoint | quote }}
+            - name: SHIPPER_OSS_S3_ACCESS_KEY
+              value: {{ .Values.server.envs.Oss_S3_AccessKey | quote }} 
+            - name: SHIPPER_OSS_S3_SECRET_KEY
+              value: {{ .Values.server.envs.Oss_S3_SecretKey | quote }} 
+            - name: SHIPPER_OSS_S3_DEFAULT_BUCKET
+              value: {{ .Values.server.envs.Oss_S3_DefaultBucket | quote }} 
+            - name: SHIPPER_OSS_S3_USEHTTPS
+              value: {{ .Values.server.envs.Oss_S3_Usehttps | quote }} 
+            - name: SHIPPER_OSS_S3_REGION
+              value: {{ .Values.server.envs.Oss_S3_Region | quote }} 
+            - name: SHIPPER_SSH_KEY
+              value: {{ .Values.server.envs.Ssh_Key | quote }} 
+            - name: SHIPPER_SSH_PRIVATE_KEY
+              value: {{ .Values.server.envs.Ssh_PrivateKey | quote }}                                                                                                                                                                                                        
           ports:
             - containerPort: 5000
               protocol: TCP

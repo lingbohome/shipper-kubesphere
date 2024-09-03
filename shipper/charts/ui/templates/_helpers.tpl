@@ -23,3 +23,39 @@ If release name contains chart name it will be used as a full name.
 {{- end }}
 {{- end }}
 
+{{/*
+Create chart name and version as used by the chart label.
+*/}}
+{{- define "extension.chart" -}}
+{{- printf "%s-%s" .Chart.Name .Chart.Version | replace "+" "_" | trunc 63 | trimSuffix "-" }}
+{{- end }}
+
+{{/*
+Common labels
+*/}}
+{{- define "extension.labels" -}}
+helm.sh/chart: {{ include "extension.chart" . }}
+{{ include "ui.selectorLabels" . }}
+{{- if .Chart.AppVersion }}
+app.kubernetes.io/version: {{ .Chart.AppVersion | quote }}
+{{- end }}
+app.kubernetes.io/managed-by: {{ .Release.Service }}
+{{- end }}
+
+
+{{/*
+Common ui labels
+*/}}
+{{- define "ui.labels" -}}
+{{ include "extension.labels" . }}
+{{- end }}
+
+{{/*
+Selector ui labels
+*/}}
+{{- define "ui.selectorLabels" -}}
+app.kubernetes.io/name: shipper-extension
+app.kubernetes.io/instance: {{ .Release.Name }}
+shipper.lingbohome.com/component: shipper-ui
+{{- end }}
+

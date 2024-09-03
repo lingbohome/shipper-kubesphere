@@ -2,6 +2,43 @@
 # This is a YAML-formatted file.
 # Declare variables to be passed into your templates.
 
+image:
+  registry: registry.cn-shanghai.aliyuncs.com/kube-shipper
+  ui:
+    repository: shipper-ui
+    tag: v0.2.0
+  pullPolicy: IfNotPresent
+imagePullSecrets: []
+
+replicaCount: 1
+
 nameOverride: ""
 fullnameOverride: ""
+namespace: ""
+
+ui:
+  podAnnotations: {}
+  podSecurityContext: {}
+  # fsGroup: 2000
+  securityContext: {}
+    # capabilities:
+    #   drop:
+    #   - ALL
+    # readOnlyRootFilesystem: true
+    # runAsNonRoot: true
+  # runAsUser: 1000
+  resources:
+    limits:
+      cpu: 2
+      memory: 2Gi
+    requests:
+     cpu: 100m
+     memory: 128Mi
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}
+
+  service:
+    type: ClusterIP
+    port: 80  
 

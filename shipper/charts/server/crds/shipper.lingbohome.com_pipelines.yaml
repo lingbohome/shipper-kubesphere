@@ -49,9 +49,7 @@ spec:
                 - name
                 type: object
               overrideParams:
-                additionalProperties:
-                  type: string
-                type: object
+                x-kubernetes-preserve-unknown-fields: true
             required:
             - builderRef
             type: object
@@ -74,9 +72,7 @@ spec:
               message:
                 type: string
               params:
-                additionalProperties:
-                  type: string
-                type: object
+                x-kubernetes-preserve-unknown-fields: true
               phase:
                 default: Pending
                 enum:
