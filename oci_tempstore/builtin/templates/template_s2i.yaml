@@ -6,12 +6,13 @@ metadata:
   labels:
     shipper.lingbohome.com/managed: "true"
     shipper.lingbohome.com/templated-by: "builder"
-    template.shipper.lingbohome.com/version: "0.1.0"
+    template.shipper.lingbohome.com/version: "0.2.0"
     template.shipper.lingbohome.com/level: "system"
   annotations:
     kubesphere.io/alias-name: 源码构建镜像
     kubesphere.io/creator: system
     kubesphere.io/description: 基于源码构建镜像，支持云原生多语言构建
+    cert.shipper.lingbohome.com/scope: "oci,ssh"
 data:
   template.yaml: |
     apiVersion: tekton.dev/v1
@@ -24,7 +25,7 @@ data:
         tekton.dev/tags: image-build
       generateName: baesd-shipper
       labels:
-        app.kubernetes.io/version: '0.1'
+        app.kubernetes.io/version: '0.2'
         shipper.lingbohome.com/platform: shipper
         shipper.lingbohome.com/useFor: builder
     spec:
@@ -171,7 +172,7 @@ data:
                   description: The image providing the git-init binary that this Task runs.
                   name: gitInitImage
                   type: string
-                - default: /home/git
+                - default: /root
                   description: |
                     Absolute path to the user's home directory.
                     
@@ -343,6 +344,8 @@ data:
             workspaces:
               - name: output
                 workspace: source-ws
+              - name: ssh-directory
+                workspace: sshkey-ws
           - name: cloud-native-build
             params:
               - name: APP_IMAGE
@@ -716,7 +719,10 @@ data:
             optional: true 
           - name: dockerconfig-ws
             description: An optional workspace that allows providing a .docker/config.json.
-            optional: true                                       
+            optional: true
+          - name: sshkey-ws
+            description: An optional workspace that allows providing a .ssh/id_rsa.
+            optional: true
       workspaces:
         - name: source-ws
           volumeClaimTemplate:
@@ -737,9 +743,15 @@ data:
         - name: dockerconfig-ws
           secret:
             secretName: {{ .Release.OciRegistry.Credentials }}
-          {{- end }} 
+          {{- end }}
+          {{- if eq .Values.sourceVisibility "private" }}
+        - name: sshkey-ws
+          secret:
+            secretName: "{{- if eq .Values.gitAuthMode "ssh-auth" }}{{ .Values.gitAuthCredentials }}{{- end }}{{- if eq .Values.gitAuthMode "built-in-ssh" }}{{ .Release.SSH.Credentials }}{{- end }}"
+          {{- end }}  
   values.yaml: |
     buildType: "0"
+    sourceVisibility: "public"
   values.schema.json: |
     {
       "properties": {
@@ -759,7 +771,7 @@ data:
         },
         "sourceUrl": {
           "title": "代码仓库地址",
-          "description": "一个代码仓库git url地址，目前仅支持公开仓库",
+          "description": "一个代码仓库git url地址，支持公开仓库和私有仓库",
           "type": "string",
           "x-shipper-ui": {
             "placeholder": "github、gitlab、gitee都可以，只要平台可以顺利访问"
@@ -791,18 +803,68 @@ data:
               "buildType":"1"
             }
           }
-        }
+        },
+        "sourceVisibility": {
+          "description": "提供的git url仓库地址是一个公开仓库还是私有仓库，公开仓库不需要认证！",
+          "title": "代码仓库可见性",
+          "type": "string",
+          "enum": [{
+              "label": "公开仓库",
+              "value": "public"
+            },
+            {
+              "label": "私有仓库",
+              "value": "private"
+            }
+          ]
+        },
+        "gitAuthMode": {
+          "description": "指定私有代码仓库的认证模式,[内置安全认证]模式下请将企业空间内的key（公钥）导入您的git系统！",
+          "title": "代码仓库认证模式",
+          "type": "string",
+          "enum": [{
+              "label": "ssh-auth",
+              "value": "ssh-auth"
+            },
+            {
+              "label": "内置安全认证（推荐）",
+              "value": "built-in-ssh"
+            }
+          ],
+          "x-shipper-ui": {
+            "visibleIf":{
+              "sourceVisibility":"private"
+            }
+          }
+        },
+        "gitAuthCredentials": {
+          "title": "代码仓库认证凭据",
+          "description": "认证凭据是一个带有id_rsa的ssh-key的secret，id_rsa键值对完全由您自定义",
+          "type": "string",
+          "x-shipper-ui": {
+            "placeholder": "在这里输入认证凭据 secret 名称",
+            "visibleIf":{
+              "gitAuthMode":"ssh-auth"
+            }
+          }
+        }        
       },
       "order": [
         "buildType",
         "sourceUrl",
+        "sourceVisibility",
+        "gitAuthMode",
+        "gitAuthCredentials",
         "sourceRef",
         "sourceSubPath",
         "sourceDockerfilePath"
       ],
       "required": [
         "sourceUrl",
-        "buildType"
+        "buildType",
+        "sourceVisibility",
+        "gitAuthMode",
+        "gitAuthCredentials"
       ],
       "title": "Values",
       "type": "object"
