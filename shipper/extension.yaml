@@ -1,6 +1,6 @@
 apiVersion: kubesphere.io/v1alpha1
 name: shipper
-version: 0.2.0
+version: 0.2.1
 displayName:
   zh: 云交付
   en: shipper
