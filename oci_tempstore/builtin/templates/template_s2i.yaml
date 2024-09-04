@@ -6,7 +6,7 @@ metadata:
   labels:
     shipper.lingbohome.com/managed: "true"
     shipper.lingbohome.com/templated-by: "builder"
-    template.shipper.lingbohome.com/version: "0.2.0"
+    template.shipper.lingbohome.com/version: "0.2.1"
     template.shipper.lingbohome.com/level: "system"
   annotations:
     kubesphere.io/alias-name: 源码构建镜像
@@ -844,6 +844,7 @@ data:
           "x-shipper-ui": {
             "placeholder": "在这里输入认证凭据 secret 名称",
             "visibleIf":{
+              "sourceVisibility":"private",
               "gitAuthMode":"ssh-auth"
             }
           }
