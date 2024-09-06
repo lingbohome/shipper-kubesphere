@@ -1,0 +1,950 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: helmchart-generator
+  namespace: shipper-system
+  labels:
+    shipper.lingbohome.com/managed: "true"
+    shipper.lingbohome.com/templated-by: "builder"
+    template.shipper.lingbohome.com/version: "0.1.0"
+    template.shipper.lingbohome.com/level: "system"
+  annotations:
+    kubesphere.io/alias-name: helmchart包生成器
+    kubesphere.io/creator: system
+    kubesphere.io/description: 基于用户可视化定义服务元数据，快速生成helmchart package
+    cert.shipper.lingbohome.com/scope: "oss"
+data:
+  template.yaml: |
+    apiVersion: tekton.dev/v1
+    kind: PipelineRun
+    metadata:
+      annotations:
+        tekton.dev/displayName: Shipper-Helmchart-Generator
+        tekton.dev/pipelines.minVersion: 0.17.0
+        tekton.dev/platforms: linux/amd64
+        tekton.dev/tags: helmchart
+      generateName: baesd-shipper
+      labels:
+        app.kubernetes.io/version: '0.2'
+        shipper.lingbohome.com/platform: shipper
+        shipper.lingbohome.com/useFor: builder
+    spec:
+      params:
+      pipelineSpec:
+        description: The Helmchart-Generator generate a stateless helmchart package and push it to the oss repository based on the user's definition..
+        params:
+        tasks:
+          - name: helmchart-generator
+            params:
+            taskSpec:
+              description: Define services metadata based on user visualization and quickly generate helmchart packages.
+              params:
+              results:
+                - description: The digest of the built `HELMCHART_PACKAGE`.
+                  name: HELMCHART_PACKAGE_DIGEST
+                  type: string 
+                - description: The oss name of the built `HELMCHART_PACKAGE`.
+                  name: HELMCHART_PACKAGE_OSSNAME
+                  type: string
+                - description: The bucket of the built `HELMCHART_PACKAGE`.
+                  name: HELMCHART_PACKAGE_BUCKET
+                  type: string                                   
+              steps:            
+                - computeResources: {}
+                  image: registry.cn-shanghai.aliyuncs.com/kube-shipper/helmchart-generator:0.1.0
+                  name: generate
+                  script: |
+                    #!/usr/bin/env bash
+                    set -e
+
+                    cat > /helmchart/Chart.yaml << EOF
+                    apiVersion: v2
+                    name: {{ .Values.basic.name }}
+                    description: {{ .Values.basic.description | quote }}
+                    type: application
+                    version: {{ .Values.basic.version }}
+                    appVersion: {{ .Values.basic.version | quote }}
+                    annotations:
+                      shipper.lingbohome.com/generate-by: shipper
+                      shipper.lingbohome.com/alias-name: {{ .Values.basic.aliasName | quote }}
+                    EOF
+
+                    cat > /helmchart/values.yaml << EOF
+                    global:
+                      imagePullPolicy: IfNotPresent
+
+
+                    image:
+                      registry: {{ .Values.image.registry | default "registry.cn-shanghai.aliyuncs.com" }}
+                      repository: {{ .Values.image.repository | default "nginx" }}
+                      tag: {{ .Values.image.tag | default "latest" }}
+                      pullPolicy: {{ .Values.image.pullPolicy | default "IfNotPresent" }}
+                    imagePullSecrets: []
+
+                    replicaCount: {{ .Values.advanced.replicaCount | default 1 }}
+                    autoscaling:
+                      enabled: {{ .Values.advanced.enabledAutoscaling | default false }}
+                      {{- if and .Values.advanced.enabledAutoscaling .Values.advanced.scaling }}
+                      minReplicas: {{ .Values.advanced.scaling.minReplicas | default 1 }}
+                      maxReplicas: {{ .Values.advanced.scaling.maxReplicas | default 3 }}
+                      targetCPUUtilizationPercentage: {{ .Values.advanced.scaling.targetCPUUtilizationPercentage | default 80 }}
+                      targetMemoryUtilizationPercentage: {{ .Values.advanced.scaling.targetMemoryUtilizationPercentage | default 80 }}
+                      {{- else }}
+                      minReplicas: 1
+                      maxReplicas: 3
+                      targetCPUUtilizationPercentage: 80
+                      targetMemoryUtilizationPercentage: 80
+                      {{- end }}
+
+
+                    nameOverride: ""
+                    fullnameOverride: ""
+
+                    podAnnotations: {}
+                    podSecurityContext: {}
+                      # fsGroup: 2000
+
+                    securityContext: {}
+                      # capabilities:
+                      #   drop:
+                      #   - ALL
+                      # readOnlyRootFilesystem: true
+                      # runAsNonRoot: true
+                      # runAsUser: 1000
+
+
+                    ingress:
+                      enabled: {{ .Values.networking.enabledIngress | default false }} 
+                      className: {{ if .Values.networking.enabledIngress }}{{ .Values.networking.ingress.className | default "" }}{{- else }}""{{- end }}
+                      {{- if and .Values.networking.enabledIngress .Values.networking.ingress.annotations }}   
+                      annotations:
+                        {{- toYaml .Values.networking.ingress.annotations | nindent 4 }}
+                      {{- else }}  
+                      annotations: {}
+                      {{- end }}
+                        # kubernetes.io/ingress.class: nginx
+                        # kubernetes.io/tls-acme: "true"  
+                      hosts:
+                        - host: {{ if .Values.networking.enabledIngress }}{{ .Values.networking.ingress.host | default "example.com" }}{{- else }}"example.com"{{- end }}
+                          paths:
+                            - path: /
+                              pathType: ImplementationSpecific    
+                      tls: []
+                      #  - secretName: chart-example-tls
+                      #    hosts:
+                      #      - chart-example.local
+
+
+                    service:
+                      type: {{ .Values.networking.serviceType | default "ClusterIP" }}
+                      port: {{ .Values.networking.port | default 80 }}
+                      nodePort: {{ if eq .Values.networking.serviceType "NodePort" }}{{ .Values.networking.nodePort | default 30000 }}{{- else }}30000{{- end }}
+
+                    {{- if .Values.advanced.startEntrySetting.args }}
+                    args:
+                      {{- toYaml . | nindent 2 }}
+                    {{- else }}  
+                    args: []  
+                    {{- end }}
+
+                    {{- if .Values.advanced.startEntrySetting.command }}
+                    command:
+                      {{- toYaml . | nindent 2 }}
+                    {{- else }}  
+                    command: []  
+                    {{- end }}  
+
+
+                    {{- if .Values.environment.envs }}
+                    envs:
+                      {{- toYaml .Values.environment.envs | nindent 2 }}
+                    {{- else }}  
+                    envs: {}
+                    {{- end }}  
+
+                    healthCheck:
+                      enabled: {{ .Values.advanced.enabledHealthCheck | default false }}
+                      httpPath: {{ if .Values.advanced.enabledHealthCheck }}{{ .Values.advanced.httpPathOfHealthCheck | default "/" }}{{- else }}"/"{{- end }}
+
+                    appConfig:
+                      enabled: {{ .Values.advanced.enabledAppConfig | default false }}
+                      mountPath: {{ if .Values.advanced.enabledAppConfig }}{{ .Values.advanced.mountPathOfAppConfig | default "/var/appsettings.json" }}{{- else }}"/var/appsettings.json"{{- end }}
+                      fileName: {{ if .Values.advanced.enabledAppConfig }}{{ .Values.advanced.fileNameOfAppConfig | default "config.json" }}{{- else }}"config.json"{{- end }}
+                      fileContent: |
+                        {{- if .Values.advanced.enabledAppConfig }}
+                        {{ .Values.advanced.fileContentOfAppConfig | default "" }}
+                        {{- end }}         
+
+                    resources:
+                      # We usually recommend not to specify default resources and to leave this as a conscious
+                      # choice for the user. This also increases chances charts run on environments with little
+                      # resources, such as Minikube. If you do want to specify resources, uncomment the following
+                      # lines, adjust them as necessary, and remove the curly braces after 'resources:'.
+                      limits:
+                        cpu: {{ .Values.resources.limitsCPU | default "4" }}
+                        memory: {{ .Values.resources.limitsMemory | default "4" }}Gi
+                      requests:
+                        cpu: {{ .Values.resources.requestsCPU | default "10" }}m
+                        memory: {{ .Values.resources.requestsMemory | default "64" }}Mi
+
+
+                    nodeSelector: {}  
+
+                    tolerations: []
+
+                    affinity: {}   
+                    EOF
+
+                    helm lint /helmchart/
+
+                    helm package /helmchart/
+
+                    packagefilename={{- printf "%s-%s.tgz" .Values.basic.name .Values.basic.version }}
+
+                    sha256_hash=sha256:$(sha256sum "$packagefilename" | awk '{print $1}')
+
+                    usehttps={{- .Release.OSS.S3.UseHttps | default "false" }}
+                    bucket={{ .Release.Workspace | default "helm-chart" }}
+                    schema=http
+
+                    if [ "$usehttps" = true ]; then
+                        schema=https
+                    fi
+
+                    mc alias set myoss $schema://{{- .Release.OSS.S3.Endpoint | default "minioserver.example.net" }} {{ .Release.OSS.S3.AccessKey }} {{ .Release.OSS.S3.SecretKey }} 
+                    mc mb myoss/$bucket  --ignore-existing
+                    mc put $packagefilename myoss/$bucket/{{ .Release.Namespace }}/{{ .Release.BuilderName }}/$packagefilename
+
+                    echo "> helmchart package uploaded..."
+                    echo -n "$sha256_hash" | tee "$(results.HELMCHART_PACKAGE_DIGEST.path)"
+                    echo -n "{{ .Release.Namespace }}/{{ .Release.BuilderName }}/$packagefilename" | tee "$(results.HELMCHART_PACKAGE_OSSNAME.path)" 
+                    echo -n "$bucket" | tee "$(results.HELMCHART_PACKAGE_BUCKET.path)"                                 
+        finally:
+          - name: artifacts-producer
+            params:
+              - name: HELMCHART_PACKAGE_DIGEST
+                value: "$(tasks.helmchart-generator.results.HELMCHART_PACKAGE_DIGEST)"
+              - name: HELMCHART_PACKAGE_OSSNAME
+                value: "$(tasks.helmchart-generator.results.HELMCHART_PACKAGE_OSSNAME)" 
+              - name: HELMCHART_PACKAGE_BUCKET
+                value: "$(tasks.helmchart-generator.results.HELMCHART_PACKAGE_BUCKET)"                                                                                                                       
+            taskSpec:
+              description: |
+                      A simple task that populates artifacts to TaskRun result
+              params:
+                - name: HELMCHART_PACKAGE_DIGEST
+                - name: HELMCHART_PACKAGE_OSSNAME 
+                - name: HELMCHART_PACKAGE_BUCKET                                       
+              results:
+                - description: artifact info.
+                  name: ArtifactInfo
+                  type: string       
+              steps:
+                - name: emitting-artifacts
+                  image: registry.cn-shanghai.aliyuncs.com/kube-shipper/bash:5.1.4
+                  script: |
+                    cat > $(results.ArtifactInfo.path) << EOF
+                    {
+                      "description":"基于用户可视化定义元数据，生成的单个无状态服务的helmchart package",
+                      "outputs":[
+                        {
+                          "name":"{{ .Release.BuilderName }}",
+                          "producer":"helmchart-generator",
+                          "type":"oss",
+                          "format":"helmchart",
+                          "url":"pkg:oss/$(params.HELMCHART_PACKAGE_OSSNAME)?endpoint={{ .Release.OSS.S3.Endpoint }}&bucket=$(params.HELMCHART_PACKAGE_BUCKET)&usehttps={{- .Release.OSS.S3.UseHttps | default "false" }}",
+                          "digest":"$(params.HELMCHART_PACKAGE_DIGEST)",
+                          "displayName":"$(params.HELMCHART_PACKAGE_BUCKET)/$(params.HELMCHART_PACKAGE_OSSNAME)",
+                          "description":""
+                        }
+                      ]
+                    }
+                    EOF
+        results:
+          - name: shipper-artifacts
+            value: $(finally.artifacts-producer.results.ArtifactInfo)  
+  values.yaml: |
+    resources: 
+      limitsCPU: 4
+      limitsMemory: 4
+      requestsCPU: 10
+      requestsMemory: 128
+  values.schema.json: |
+    {
+        "properties": {
+          "basic": {
+            "description": "配置单个无状态应用或服务的helmchart基本信息",
+            "title": "基本信息",
+            "type": "object",
+            "properties":{
+                "name": {
+                    "title": "名称",
+                    "description": "设置helmchart的package名称，只能包含小写字母、数字和连字符（-），必须以小写字母开头并以小写字母或数字结尾，最长 63 个字符",
+                    "type": "string",
+                    "pattern":"[a-z]([-a-z0-9]*[a-z0-9])?",
+                    "maxLength": 63
+                  },
+                  "aliasName": {
+                    "title": "别名",
+                    "description": "别名只能包含中文、字母、数字和连字符（-），不得以连字符（-）开头或结尾，最长 63 个字符。",
+                    "type": "string",
+                    "maxLength": 63,
+                    "pattern":"^(?!-)(?!.*-$)[\u4e00-\u9fa5a-zA-Z0-9-]+$"
+                  },
+                  "version": {
+                    "title": "版本",
+                    "description": "版本号需要符合[semver2.0]的语义化版本号规范",
+                    "type": "string",
+                    "pattern":"^(0|[1-9]\\d*)\\.(0|[1-9]\\d*)\\.(0|[1-9]\\d*)(\\-[0-9A-Za-z-]+(\\.[0-9A-Za-z-]+)*)?(\\+[0-9A-Za-z-]+(\\.[0-9A-Za-z-]+)*)?$"
+                  },
+                  "description": {
+                    "title": "描述",
+                    "description": "描述可包含任意字符，最长 256 个字符。",
+                    "type": "string",
+                    "maxLength": 256,
+                    "x-shipper-ui": {
+                      "widget":"textarea",
+                      "placeholder": "写个描述吧...",
+                      "maxRows": 3
+                    }
+                  }
+            },
+            "order": [
+                "name",
+                "aliasName",
+                "version",       
+                "description"
+              ],
+            "required": [
+                "name",
+                "version",
+                "aliasName",
+                "description"
+              ]
+          },
+          "image": {
+            "description": "配置单个无状态应用或服务的容器镜像",
+            "title": "配置镜像",
+            "type": "object",
+            "properties":{
+                "registry": {
+                    "title": "镜像仓库",
+                    "description": "镜像仓库host地址，如：my.imagehub.com",
+                    "type": "string"
+                  },
+                "repository": {
+                    "title": "镜像存储库",
+                    "description": "镜像名称或带有存储库的名称，如：nginx，myrepo/nginx",
+                    "type": "string"
+                  },
+                "tag": {
+                    "title": "镜像Tag",
+                    "description": "镜像Tag号",
+                    "type": "string"
+                  },
+                "pullPolicy": {
+                    "title": "镜像拉取策略",
+                    "type": "string",
+                    "enum": [{
+                        "label": "Always",
+                        "value": "Always"
+                      },
+                      {
+                        "label": "IfNotPresent",
+                        "value": "IfNotPresent"
+                      },
+                      {
+                        "label": "Never",
+                        "value": "Never"
+                      }
+                    ]
+                  }
+            },
+            "order": [
+                "registry",
+                "repository",
+                "tag",
+                "pullPolicy"
+              ],
+            "required": [
+                "registry",
+                "repository",
+                "tag",
+                "pullPolicy"
+              ]
+          },
+          "networking": {
+            "description": "配置单个无状态应用或服务的网络",
+            "title": "配置网络",
+            "type": "object",
+            "properties":{
+                "serviceType": {
+                    "title": "服务类型",
+                    "description": "定义服务访问的方式",
+                    "type": "string",
+                    "enum": [{
+                        "label": "ClusterIP",
+                        "value": "ClusterIP"
+                      },
+                      {
+                        "label": "NodePort",
+                        "value": "NodePort"
+                      },
+                      {
+                        "label": "LoadBalancer",
+                        "value": "LoadBalancer"
+                      }
+                    ]
+                  },
+                "port": {
+                    "title": "服务端口",
+                    "description": "服务在集群内的端口，同时也是您的容器内程序监听的端口",
+                    "type": "integer",
+                    "minimum": 10
+                  },
+                "nodePort": {
+                    "title": "服务对外访问端口",
+                    "description": "服务对集群外暴露的端口",
+                    "type": "integer",
+                    "minimum": 20000,
+                    "maximum": 40000,
+                    "x-shipper-ui": {
+                        "visibleIf":{
+                          "serviceType":"NodePort"
+                        }
+                      }
+                  },
+                "enabledIngress": {
+                    "title": "开启入口网关",
+                    "description": "开启后，可在集群外通过网关地址访问",
+                    "type": "boolean",
+                    "x-shipper-ui": {
+                        "tooltip": "启用"
+                      }
+                  },
+                "ingress": {
+                    "title": "配置入口网关",
+                    "description": "配置单个无状态应用或服务的网关",
+                    "type": "object",
+                    "properties": {
+                        "host":{
+                          "title": "入口主机域名",
+                          "description": "访问入口主机域名，如：myservice.mydomain.com",
+                          "pattern":"^[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$",
+                          "type": "string"
+                        },
+                        "className":{
+                            "title": "网关提供者",
+                            "description": "配置使用哪个网关提供者，为您的服务提供访问能力",
+                            "x-shipper-ui": {
+                                "placeholder": "没有配置时，默认使用集群管理员设置的默认网关提供者"
+                              },
+                            "type": "string"
+                          },
+                        "annotations":{
+                            "title": "入口网关注解",
+                            "description": "根据不同的网关提供者文档，满足更多复杂场景的配置",
+                            "type": "object",
+                            "additionalProperties":{
+                                "type":"string"
+                              }
+                          }
+                      },
+                      "x-shipper-ui": {
+                        "visibleIf":{
+                          "enabledIngress":"true"
+                        }
+                      },
+                      "order": [
+                        "host",
+                        "className",
+                        "annotations" 
+                      ],
+                      "required": [
+                        "host"
+                      ]  
+                  }  
+            },
+            "order": [
+                "serviceType",
+                "port",
+                "nodePort",
+                "enabledIngress",
+                "ingress"
+              ],
+            "required": [
+                "serviceType",
+                "port",
+                "nodePort"
+              ]
+          },
+          "environment": {
+            "description": "配置单个无状态应用或服务的环境变量",
+            "title": "环境变量",
+            "type": "object",
+            "properties":{
+                "envs": {
+                    "title": "设置环境变量",
+                    "type": "object",
+                    "additionalProperties":{
+                        "type":"string"
+                      }
+                  }
+            }
+          },
+          "resources": {
+            "description": "配置单个无状态应用或服务的所需的计算资源",
+            "title": "配置计算资源",
+            "type": "object",
+            "properties":{
+                "limitsCPU": {
+                    "title": "CPU最大使用量",
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 8,
+                    "x-shipper-ui": {
+                        "widget": "slider",
+                        "step":1,
+                        "marks":[{
+                          "label": "1Gi",
+                          "value": 1
+                        },
+                        {
+                          "label": "2Gi",
+                          "value": 2
+                        },          {
+                          "label": "3Gi",
+                          "value": 3
+                        },   {
+                          "label": "4Gi",
+                          "value": 4
+                        },{
+                            "label": "5Gi",
+                            "value": 5
+                          },
+                          {
+                            "label": "6Gi",
+                            "value": 6
+                          },          {
+                            "label": "7Gi",
+                            "value": 7
+                          },   {
+                            "label": "8Gi",
+                            "value": 8
+                          }
+                        ]
+                      }
+                  },
+                  "limitsMemory": {
+                    "title": "内存最大使用量",
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 8,
+                    "x-shipper-ui": {
+                        "widget": "slider",
+                        "step":1,
+                        "marks":[{
+                          "label": "1Gi",
+                          "value": 1
+                        },
+                        {
+                          "label": "2Gi",
+                          "value": 2
+                        },          {
+                          "label": "3Gi",
+                          "value": 3
+                        },   {
+                          "label": "4Gi",
+                          "value": 4
+                        },{
+                            "label": "5Gi",
+                            "value": 5
+                          },
+                          {
+                            "label": "6Gi",
+                            "value": 6
+                          },          {
+                            "label": "7Gi",
+                            "value": 7
+                          },   {
+                            "label": "8Gi",
+                            "value": 8
+                          }
+                        ]
+                      }
+                  },
+                  "requestsCPU": {
+                    "title": "CPU最低预算",
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 800,
+                    "x-shipper-ui": {
+                        "widget": "slider",
+                        "step":1,
+                        "marks":[{
+                          "label": "1m",
+                          "value": 1
+                        },
+                        {
+                          "label": "100m",
+                          "value": 100
+                        },          {
+                          "label": "200m",
+                          "value": 200
+                        },   {
+                          "label": "300m",
+                          "value": 300
+                        },{
+                            "label": "400m",
+                            "value": 400
+                          },
+                          {
+                            "label": "500m",
+                            "value": 500
+                          },          {
+                            "label": "600m",
+                            "value": 600
+                          },   {
+                            "label": "700m",
+                            "value": 700
+                          }, {
+                            "label": "800m",
+                            "value": 800
+                          }
+                        ]
+                      }
+                  },
+                  "requestsMemory": {
+                    "title": "内存最低预算",
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 800,
+                    "x-shipper-ui": {
+                        "widget": "slider",
+                        "step":1,
+                        "marks":[{
+                          "label": "1Mi",
+                          "value": 1
+                        },
+                        {
+                          "label": "100Mi",
+                          "value": 100
+                        },          {
+                          "label": "200Mi",
+                          "value": 200
+                        },   {
+                          "label": "300Mi",
+                          "value": 300
+                        },{
+                            "label": "400Mi",
+                            "value": 400
+                          },
+                          {
+                            "label": "500Mi",
+                            "value": 500
+                          },          {
+                            "label": "600Mi",
+                            "value": 600
+                          },   {
+                            "label": "700Mi",
+                            "value": 700
+                          }, {
+                            "label": "800Mi",
+                            "value": 800
+                          }
+                        ]
+                      }
+                  }              
+            },
+            "order": [
+                "limitsCPU",
+                "limitsMemory",
+                "requestsCPU",
+                "requestsMemory"
+              ],
+            "required": [
+                "limitsCPU",
+                "limitsMemory",
+                "requestsCPU",
+                "requestsMemory"
+              ]
+          },
+          "advanced": {
+            "description": "配置单个无状态应用或服务的高级部署设置",
+            "title": "高级设置",
+            "type": "object",
+            "properties":{
+                "enabledHealthCheck": {
+                    "title": "启用健康检查",
+                    "description": "启用后，会定期探测服务是否健康，不健康的服务会自动重启",
+                    "type": "boolean",
+                    "x-shipper-ui": {
+                        "tooltip": "启用"
+                      }
+                  },
+                "httpPathOfHealthCheck": {
+                    "title": "健康检查的httppath",
+                    "description": "提供健康探测的http接口路径，比如：/api/ready",
+                    "type": "string",
+                    "x-shipper-ui": {
+                        "visibleIf":{
+                          "enabledHealthCheck":"true"
+                        }
+                      }
+                  },
+                  "enabledAppConfig": {
+                    "title": "设置应用的配置文件",
+                    "description": "设置后，将会将您设置的文件内容，挂载到您设置的文件路径下",
+                    "type": "boolean",
+                    "x-shipper-ui": {
+                        "tooltip": "设置"
+                      }
+                  }, 
+                  "mountPathOfAppConfig": {
+                    "title": "挂载配置文件的路径",
+                    "description": "路径为服务容器内的值，比如：/var/nginx/conf.d/default.conf",
+                    "type": "string",
+                    "x-shipper-ui": {
+                        "visibleIf":{
+                          "enabledAppConfig":"true"
+                        }
+                      }
+                  },
+                  "fileNameOfAppConfig": {
+                    "title": "配置文件名",
+                    "description": "用来存储您设置的配置文件的名称，比如：default.conf",
+                    "type": "string",
+                    "x-shipper-ui": {
+                        "visibleIf":{
+                          "enabledAppConfig":"true"
+                        }
+                      }
+                  }, 
+                  "fileContentOfAppConfig": {
+                    "title": "配置文件内容",
+                    "description": "用来存储您设置的配置文件的内容",
+                    "type": "string",
+                    "maxLength":5000,
+                    "x-shipper-ui": {
+                        "widget":"textarea",
+                        "maxRows": 5,
+                        "visibleIf":{
+                          "enabledAppConfig":"true"
+                        }
+                      }
+                  },                                                         
+                "startEntrySetting": {
+                    "title": "服务启动入口设置",
+                    "type": "object",
+                    "properties": {
+                        "command":{
+                          "title": "启动命令",
+                          "description": "服务容器的启动命令",
+                          "type": "array",
+                          "items":{
+                            "type":"string"
+                          }
+                        },
+                        "args":{
+                            "title": "启动参数",
+                            "description": "服务容器的启动参数",
+                            "type": "array",
+                            "items":{
+                              "type":"string"
+                            }
+                          }
+                      },
+                      "order": [
+                        "command",
+                        "args"
+                      ]
+                  },
+                  "enabledAutoscaling": {
+                    "title": "设置自动伸缩",
+                    "description": "启用后，运行时自动根据服务的cpu或内存评估缩放副本数量",
+                    "type": "boolean",
+                    "x-shipper-ui": {
+                        "tooltip": "设置"
+                      }
+                  },               
+                  "scaling": {
+                    "title": "自动伸缩",
+                    "description": "配置单个无状态应用或服务的自动伸缩规则",
+                    "type": "object",
+                    "properties": {
+                        "minReplicas":{
+                          "title": "最小副本数",
+                          "description": "可自动伸缩的最小副本数",
+                          "minimum": 1,
+                          "maximum": 3,
+                          "type": "integer"
+                        },
+                        "maxReplicas":{
+                            "title": "最大副本数",
+                            "description": "可自动伸缩的最大副本数",
+                            "minimum": 3,
+                            "maximum": 10,
+                            "type": "integer"
+                          },
+                        "targetCPUUtilizationPercentage":{
+                            "title": "CPU使用率百分比",
+                            "description": "当目标CPU使用率百分比达到指定值时，开始自动缩放",
+                            "minimum": 10,
+                            "maximum": 100,
+                            "type": "integer",
+                            "x-shipper-ui": {
+                                "widget": "slider",
+                                "step":10,
+                                "marks":[{
+                                  "label": "10%",
+                                  "value": 10
+                                },
+                                {
+                                  "label": "20%",
+                                  "value": 20
+                                },          {
+                                  "label": "30%",
+                                  "value": 30
+                                },   {
+                                  "label": "40%",
+                                  "value": 40
+                                },{
+                                    "label": "50%",
+                                    "value": 50
+                                  },
+                                  {
+                                    "label": "60%",
+                                    "value": 60
+                                  }, {
+                                    "label": "70%",
+                                    "value": 70
+                                  },   {
+                                    "label": "80%",
+                                    "value": 80
+                                  },
+                                  {
+                                    "label": "90%",
+                                    "value": 90
+                                  },   {
+                                    "label": "100%",
+                                    "value": 100
+                                  }
+                                ]
+                              }
+                          },
+                          "targetMemoryUtilizationPercentage":{
+                            "title": "内存使用率百分比",
+                            "description": "当目标内存使用率百分比达到指定值时，开始自动缩放",
+                            "minimum": 10,
+                            "maximum": 100,
+                            "type": "integer",
+                            "x-shipper-ui": {
+                                "widget": "slider",
+                                "step":10,
+                                "marks":[{
+                                  "label": "10%",
+                                  "value": 10
+                                },
+                                {
+                                  "label": "20%",
+                                  "value": 20
+                                },          {
+                                  "label": "30%",
+                                  "value": 30
+                                },   {
+                                  "label": "40%",
+                                  "value": 40
+                                },{
+                                    "label": "50%",
+                                    "value": 50
+                                  },
+                                  {
+                                    "label": "60%",
+                                    "value": 60
+                                  }, {
+                                    "label": "70%",
+                                    "value": 70
+                                  },   {
+                                    "label": "80%",
+                                    "value": 80
+                                  },
+                                  {
+                                    "label": "90%",
+                                    "value": 90
+                                  },   {
+                                    "label": "100%",
+                                    "value": 100
+                                  }
+                                ]
+                              }
+                          }
+                      },
+                      "x-shipper-ui": {
+                        "visibleIf":{
+                          "enabledAutoscaling":"true"
+                        }
+                      },
+                      "order": [
+                        "minReplicas",
+                        "maxReplicas",
+                        "targetCPUUtilizationPercentage",
+                        "targetMemoryUtilizationPercentage"
+                      ],
+                      "required": [
+                        "minReplicas",
+                        "maxReplicas",
+                        "targetCPUUtilizationPercentage",
+                        "targetMemoryUtilizationPercentage"
+                      ]
+                  },
+                  "replicaCount": {
+                    "title": "副本数量",
+                    "description": "表示运行时启动服务副本的数量",
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 10,
+                    "x-shipper-ui": {
+                        "visibleIf":{
+                          "enabledAutoscaling":"false"
+                        }
+                      }
+                  }
+            },
+            "order": [
+                "enabledHealthCheck",
+                "httpPathOfHealthCheck",
+                "enabledAppConfig",
+                "mountPathOfAppConfig",
+                "fileNameOfAppConfig",
+                "fileContentOfAppConfig",
+                "startEntrySetting",
+                "enabledAutoscaling",
+                "scaling",
+                "replicaCount"
+              ],
+            "required": [
+                "httpPathOfHealthCheck",
+                "mountPathOfAppConfig",
+                "fileNameOfAppConfig",
+                "fileContentOfAppConfig",
+                "replicaCount"
+              ]
+          }                                      
+        },
+        "order": [
+          "basic",
+          "image",
+          "networking",
+          "environment",
+          "resources",
+          "advanced"
+        ],
+        "required": [
+          "basic",
+          "image",
+          "networking",
+          "resources"
+        ],
+        "title": "Values",
+        "type": "object"
+      }  
