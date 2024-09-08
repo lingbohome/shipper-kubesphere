@@ -6,13 +6,13 @@ metadata:
   labels:
     shipper.lingbohome.com/managed: "true"
     shipper.lingbohome.com/templated-by: "builder"
-    template.shipper.lingbohome.com/version: "0.1.0"
+    template.shipper.lingbohome.com/version: "0.2.0"
     template.shipper.lingbohome.com/level: "system"
   annotations:
     kubesphere.io/alias-name: helmchart包生成器
     kubesphere.io/creator: system
     kubesphere.io/description: 基于用户可视化定义服务元数据，快速生成helmchart package
-    cert.shipper.lingbohome.com/scope: "oss"
+    cert.shipper.lingbohome.com/scope: "oss,oci"
 data:
   template.yaml: |
     apiVersion: tekton.dev/v1
@@ -36,6 +36,9 @@ data:
         tasks:
           - name: helmchart-generator
             params:
+            workspaces:
+              - name: dockerconfig
+                workspace: dockerconfig-ws            
             taskSpec:
               description: Define services metadata based on user visualization and quickly generate helmchart packages.
               params:
@@ -48,10 +51,15 @@ data:
                   type: string
                 - description: The bucket of the built `HELMCHART_PACKAGE`.
                   name: HELMCHART_PACKAGE_BUCKET
-                  type: string                                   
+                  type: string
+              workspaces:
+                - description: Includes a docker `config.json`
+                  mountPath: /root/.config/helm/registry
+                  name: dockerconfig
+                  optional: true                                                     
               steps:            
                 - computeResources: {}
-                  image: registry.cn-shanghai.aliyuncs.com/kube-shipper/helmchart-generator:0.1.0
+                  image: registry.cn-shanghai.aliyuncs.com/kube-shipper/helmchart-generator:0.2.3
                   name: generate
                   script: |
                     #!/usr/bin/env bash
@@ -67,22 +75,220 @@ data:
                     annotations:
                       shipper.lingbohome.com/generate-by: shipper
                       shipper.lingbohome.com/alias-name: {{ .Values.basic.aliasName | quote }}
+                    {{- if .Values.basic.keywords }}
+                    keywords:
+                      {{- toYaml .Values.basic.keywords | nindent 18 }} 
+                    {{- end }}   
                     EOF
 
                     cat > /helmchart/values.yaml << EOF
+                    ## @section 全局参数
+                    ## @descriptionStart 该节点用于配置一些全局的参数，它在所有的chart及子chart中都能访问的值
+                    ##
+                    ## 全局参数建议定义在[该节点下](#全局参数).
+                    ## @descriptionEnd
+                    ## @param global.imageRegistry [string,default:docker.io] 全局docker镜像仓库的host地址
+                    ## @param global.imagePullPolicy [string,default:IfNotPresent] 全局k8s镜像的拉取策略
+                    ## @param global.imagePullSecrets [array] 全局docker镜像仓库的secret名称数组
+                    ##
                     global:
+                      imageRegistry: "docker.io"
                       imagePullPolicy: IfNotPresent
+                      imagePullSecrets: []
 
 
+                    ## @section 通用参数
+                    ## @descriptionStart 该节点用于配置一些通用的参数，
+                    ##
+                    ## 通用参数建议定义在[该节点下](#通用参数).
+                    ## @descriptionEnd
+
+                    ## @param nameOverride [string] 覆盖chart.name的值
+                    ##
+                    nameOverride: ""
+                    ## @param fullnameOverride [string] 覆盖chart.fullname的值
+                    ##
+                    fullnameOverride: ""
+                    ## @param category [string] 用于标识服务的类别或用途
+                    ##
+                    category: {{ .Values.basic.category | default "other" }}
+                    ## @param imagePullSecrets [array] docker镜像仓库的secret名称数组
+                    ##
+                    imagePullSecrets: []
+
+
+                    ## @section 镜像配置相关参数
+                    ## @descriptionStart 该节点用于配置镜像，
+                    ##
+                    ## 配置镜像参数建议定义在[该节点下](#镜像配置相关参数).
+                    ## @descriptionEnd
+                    ## @param image.registry [string,default:registry.cn-shanghai.aliyuncs.com] 镜像仓库的host地址
+                    ## @param image.repository [string] 镜像repo
+                    ## @param image.tag [string] 镜像tag
+                    ## @param image.pullPolicy [string,default:IfNotPresent] 镜像拉取策略
+                    ##
                     image:
                       registry: {{ .Values.image.registry | default "registry.cn-shanghai.aliyuncs.com" }}
                       repository: {{ .Values.image.repository | default "nginx" }}
                       tag: {{ .Values.image.tag | default "latest" }}
                       pullPolicy: {{ .Values.image.pullPolicy | default "IfNotPresent" }}
-                    imagePullSecrets: []
 
+
+                    ## @section 配置服务网络相关参数
+                    ## @descriptionStart 该节点用于配置网络，
+                    ##
+                    ## 配置网络相关参数建议定义在[该节点下](#网络相关参数).
+                    ## @descriptionEnd
+
+                    service:
+                      ## @param service.type 暴露的服务类型 NodePort|ClusterIP
+                      ##
+                      type: {{ .Values.networking.serviceType | default "ClusterIP" }}
+                      ## @param service.port 暴露的服务端口
+                      ##  
+                      port: {{ .Values.networking.port | default 80 }}
+                      ## @param service.nodePort NodePort服务类型下暴露的外部端口
+                      ##  
+                      nodePort: {{ if eq .Values.networking.serviceType "NodePort" }}{{ .Values.networking.nodePort | default 30000 }}{{- else }}30000{{- end }}
+
+                    ingress:
+                      ## @param ingress.enabled 是否启用ingress
+                      ##
+                      enabled: {{ .Values.networking.enabledIngress | default false }}
+                      ## @param ingress.className [string]  ingress class name
+                      ##    
+                      className: {{ if .Values.networking.enabledIngress }}{{ .Values.networking.ingress.className | default "''" }}{{- else }}""{{- end }}
+                      ## @param ingress.annotations [object] ingress annotations
+                      ##     
+                      {{- if and .Values.networking.enabledIngress .Values.networking.ingress.annotations }}   
+                      annotations:
+                        {{- toYaml .Values.networking.ingress.annotations | nindent 20 }}
+                      {{- else }}  
+                      annotations: {}
+                      {{- end }}
+                        # kubernetes.io/ingress.class: nginx
+                        # kubernetes.io/tls-acme: "true"
+                      ## @param ingress.hosts[0].host ingress host地址
+                      ## @skip ingress.hosts[0].paths
+                      ##        
+                      hosts:
+                        - host: {{ if .Values.networking.enabledIngress }}{{ .Values.networking.ingress.host | default "example.com" }}{{- else }}"example.com"{{- end }}
+                          paths:
+                            - path: /
+                              pathType: ImplementationSpecific
+                      ## @param ingress.tls [array] ingress tls配置              
+                      tls: []
+                      #  - secretName: chart-example-tls
+                      #    hosts:
+                      #      - chart-example.local
+
+
+
+                    ## @section 配置服务环境变量
+                    ## @descriptionStart 该节点用于配置环境变量，
+                    ##
+                    ## 配置环境相关参数建议定义在[该节点下](#环境变量参数).
+                    ## @descriptionEnd
+
+                    {{- if .Values.environment.envs }}
+                    {{- range $key, $value := .Values.environment.envs }}
+                    ## @param envs.{{- $key }} [string,default:{{- $value }}] {{ $key }}
+                    {{- end }}
+                    ## 
+                    envs:
+                      {{- toYaml .Values.environment.envs | nindent 18 }}
+                    {{- else }}
+                    ## @param envs [object] 环境变量
+                    ##  
+                    envs: {}
+                    {{- end }}
+
+
+
+                    ## @section 配置服务计算资源
+                    ## @descriptionStart 该节点用于配置计算资源，
+                    ##
+                    ## 配置计算资源相关参数建议定义在[该节点下](#计算资源参数).
+                    ## @descriptionEnd
+
+                    ## @param resources.limits [object] 配置服务资源限制 [参考引用](https://kubernetes.io/zh-cn/docs/concepts/configuration/manage-resources-containers/#requests-and-limits)
+                    ## @param resources.requests [object] 配置服务资源请求 [参考引用](https://kubernetes.io/zh-cn/docs/concepts/configuration/manage-resources-containers/#requests-and-limits)
+                    ##
+                    resources:
+                      # We usually recommend not to specify default resources and to leave this as a conscious
+                      # choice for the user. This also increases chances charts run on environments with little
+                      # resources, such as Minikube. If you do want to specify resources, uncomment the following
+                      # lines, adjust them as necessary, and remove the curly braces after 'resources:'.
+                      limits:
+                        cpu: {{ .Values.resources.limitsCPU | default "4" }}
+                        memory: {{ .Values.resources.limitsMemory | default "4" }}Gi
+                      requests:
+                        cpu: {{ .Values.resources.requestsCPU | default "10" }}m
+                        memory: {{ .Values.resources.requestsMemory | default "64" }}Mi
+
+
+                    ## @section 配置部署相关参数
+                    ## @descriptionStart 该节点用于配置部署参数，
+                    ##
+                    ## 配置部署相关参数建议定义在[该节点下](#部署参数).
+                    ## @descriptionEnd
+
+                    ## @param args [array,nullable] 服务启动参数
+                    ##
+                    {{- if .Values.advanced.startEntrySetting.args }}
+                    args:
+                      {{- toYaml .Values.advanced.startEntrySetting.args | nindent 18 }}
+                    {{- else }}  
+                    args: []  
+                    {{- end }}
+
+                    ## @param command [array,nullable] 服务启动命令
+                    ##
+                    {{- if .Values.advanced.startEntrySetting.command }}
+                    command:
+                      {{- toYaml .Values.advanced.startEntrySetting.command | nindent 18 }}
+                    {{- else }}  
+                    command: []  
+                    {{- end }}  
+
+
+
+                    healthCheck:
+                      ## @param healthCheck.enabled 是否启用健康检查
+                      ##
+                      enabled: {{ .Values.advanced.enabledHealthCheck | default false }}
+                      ## @param healthCheck.httpPath 健康检查的httppath
+                      ##  
+                      httpPath: {{ if .Values.advanced.enabledHealthCheck }}{{ .Values.advanced.httpPathOfHealthCheck | default "/" }}{{- else }}"/"{{- end }}
+
+                    appConfig:
+                      ## @param appConfig.enabled 是否设置服务配置文件
+                      ##
+                      enabled: {{ .Values.advanced.enabledAppConfig | default false }}
+                      ## @param appConfig.mountPath 配置文件挂载路径
+                      ##  
+                      mountPath: {{ if .Values.advanced.enabledAppConfig }}{{ .Values.advanced.mountPathOfAppConfig | default "/var/appsettings.json" }}{{- else }}"/var/appsettings.json"{{- end }}
+                      ## @param appConfig.fileName 配置文件名
+                      ##  
+                      fileName: {{ if .Values.advanced.enabledAppConfig }}{{ .Values.advanced.fileNameOfAppConfig | default "config.json" }}{{- else }}"config.json"{{- end }}
+                      ## @param appConfig.fileContent [string] 配置文件内容
+                      ##  
+                      fileContent: |
+                        {{- if .Values.advanced.enabledAppConfig -}}
+                        {{ .Values.advanced.fileContentOfAppConfig | default "" | nindent 20 }}
+                        {{- end }}
+
+
+                    ## @param replicaCount 部署副本数
+                    ##
                     replicaCount: {{ .Values.advanced.replicaCount | default 1 }}
                     autoscaling:
+                      ## @param autoscaling.enabled 是否启用自动伸缩
+                      ## @param autoscaling.minReplicas 自动伸缩的最小副本数
+                      ## @param autoscaling.maxReplicas 自动伸缩的最大副本数
+                      ## @param autoscaling.targetCPUUtilizationPercentage 目标CPU使用率
+                      ## @param autoscaling.targetMemoryUtilizationPercentage 目标内存使用率
+                      ##
                       enabled: {{ .Values.advanced.enabledAutoscaling | default false }}
                       {{- if and .Values.advanced.enabledAutoscaling .Values.advanced.scaling }}
                       minReplicas: {{ .Values.advanced.scaling.minReplicas | default 1 }}
@@ -97,109 +303,96 @@ data:
                       {{- end }}
 
 
-                    nameOverride: ""
-                    fullnameOverride: ""
 
+
+                    ## @section 可选的附加高级参数
+                    ## @descriptionStart 该节点用于配置一些个性化的高级参数，
+                    ##
+                    ## 高级参数建议定义在[该节点下](#高级参数).
+                    ## @descriptionEnd
+                    ## @param podAnnotations [object] 附加的pod annotations注解 [参考说明](https://kubernetes.io/docs/concepts/overview/working-with-objects/annotations/)
+                    ##
                     podAnnotations: {}
+                    ## @param podSecurityContext [object] 配置PodSecurityContext [参考说明](https://kubernetes.io/zh-cn/docs/tasks/configure-pod-container/security-context/)
+                    ##
                     podSecurityContext: {}
                       # fsGroup: 2000
 
+                    ## @param securityContext [object] 配置容器SecurityContext [参考说明](https://kubernetes.io/zh-cn/docs/tasks/configure-pod-container/security-context/#set-the-security-context-for-a-container)
+                    ##
                     securityContext: {}
                       # capabilities:
                       #   drop:
                       #   - ALL
                       # readOnlyRootFilesystem: true
                       # runAsNonRoot: true
-                      # runAsUser: 1000
+                      # runAsUser: 1000    
 
-
-                    ingress:
-                      enabled: {{ .Values.networking.enabledIngress | default false }} 
-                      className: {{ if .Values.networking.enabledIngress }}{{ .Values.networking.ingress.className | default "" }}{{- else }}""{{- end }}
-                      {{- if and .Values.networking.enabledIngress .Values.networking.ingress.annotations }}   
-                      annotations:
-                        {{- toYaml .Values.networking.ingress.annotations | nindent 4 }}
-                      {{- else }}  
-                      annotations: {}
-                      {{- end }}
-                        # kubernetes.io/ingress.class: nginx
-                        # kubernetes.io/tls-acme: "true"  
-                      hosts:
-                        - host: {{ if .Values.networking.enabledIngress }}{{ .Values.networking.ingress.host | default "example.com" }}{{- else }}"example.com"{{- end }}
-                          paths:
-                            - path: /
-                              pathType: ImplementationSpecific    
-                      tls: []
-                      #  - secretName: chart-example-tls
-                      #    hosts:
-                      #      - chart-example.local
-
-
-                    service:
-                      type: {{ .Values.networking.serviceType | default "ClusterIP" }}
-                      port: {{ .Values.networking.port | default 80 }}
-                      nodePort: {{ if eq .Values.networking.serviceType "NodePort" }}{{ .Values.networking.nodePort | default 30000 }}{{- else }}30000{{- end }}
-
-                    {{- if .Values.advanced.startEntrySetting.args }}
-                    args:
-                      {{- toYaml . | nindent 2 }}
-                    {{- else }}  
-                    args: []  
-                    {{- end }}
-
-                    {{- if .Values.advanced.startEntrySetting.command }}
-                    command:
-                      {{- toYaml . | nindent 2 }}
-                    {{- else }}  
-                    command: []  
-                    {{- end }}  
-
-
-                    {{- if .Values.environment.envs }}
-                    envs:
-                      {{- toYaml .Values.environment.envs | nindent 2 }}
-                    {{- else }}  
-                    envs: {}
-                    {{- end }}  
-
-                    healthCheck:
-                      enabled: {{ .Values.advanced.enabledHealthCheck | default false }}
-                      httpPath: {{ if .Values.advanced.enabledHealthCheck }}{{ .Values.advanced.httpPathOfHealthCheck | default "/" }}{{- else }}"/"{{- end }}
-
-                    appConfig:
-                      enabled: {{ .Values.advanced.enabledAppConfig | default false }}
-                      mountPath: {{ if .Values.advanced.enabledAppConfig }}{{ .Values.advanced.mountPathOfAppConfig | default "/var/appsettings.json" }}{{- else }}"/var/appsettings.json"{{- end }}
-                      fileName: {{ if .Values.advanced.enabledAppConfig }}{{ .Values.advanced.fileNameOfAppConfig | default "config.json" }}{{- else }}"config.json"{{- end }}
-                      fileContent: |
-                        {{- if .Values.advanced.enabledAppConfig }}
-                        {{ .Values.advanced.fileContentOfAppConfig | default "" }}
-                        {{- end }}         
-
-                    resources:
-                      # We usually recommend not to specify default resources and to leave this as a conscious
-                      # choice for the user. This also increases chances charts run on environments with little
-                      # resources, such as Minikube. If you do want to specify resources, uncomment the following
-                      # lines, adjust them as necessary, and remove the curly braces after 'resources:'.
-                      limits:
-                        cpu: {{ .Values.resources.limitsCPU | default "4" }}
-                        memory: {{ .Values.resources.limitsMemory | default "4" }}Gi
-                      requests:
-                        cpu: {{ .Values.resources.requestsCPU | default "10" }}m
-                        memory: {{ .Values.resources.requestsMemory | default "64" }}Mi
-
-
+                    ## @param nodeSelector [object] 调度策略之节点选择器 [参考说明](https://kubernetes.io/zh-cn/docs/concepts/scheduling-eviction/assign-pod-node/#nodeselector)
+                    ##
                     nodeSelector: {}  
-
+                    ## @param tolerations [array] 调度策略之污点与容忍度 [参考说明](https://kubernetes.io/zh-cn/docs/concepts/scheduling-eviction/taint-and-toleration/)
+                    ##
                     tolerations: []
-
-                    affinity: {}   
+                    ## @param affinity [object] 调度策略之亲和性 [参考说明](https://kubernetes.io/zh-cn/docs/concepts/scheduling-eviction/assign-pod-node/#affinity-and-anti-affinity)
+                    ##
+                    affinity: {}    
                     EOF
 
-                    helm lint /helmchart/
+                    cat > /helmchart/README.md << EOF
+                    # {{ .Values.basic.name }}
 
-                    helm package /helmchart/
+                    [{{ .Values.basic.name }}](https://github.com/{{ .Values.basic.name }}) {{ .Values.basic.description }}
+
+                    ## TL;DR
+
+                    \`\`\`shell
+                    helm install myrelease oci://{{ .Release.OciRegistry.Host }}/{{ if .Release.OciRegistry.Group }}{{ .Release.OciRegistry.Group }}/{{ end }}{{ .Release.Workspace }}/{{ .Release.Namespace }}/{{ .Release.BuilderName }}/{{ .Values.basic.name }} --version {{ .Values.basic.version }}
+                    \`\`\`
+
+                    ## Introduction
+
+                    This chart bootstraps a {{ .Values.basic.name }} deployment on a [Kubernetes](http://kubernetes.io) cluster using the [Helm](https://helm.sh) package manager.
+
+                    ## Prerequisites
+
+                    - Kubernetes 1.20+
+                    - Helm 3.8.0
+
+                    ## Installing the Chart
+
+                    To install the chart with the release name \`my-release\`:
+
+                    \`\`\`shell
+                    helm install myrelease oci://{{ .Release.OciRegistry.Host }}/{{ if .Release.OciRegistry.Group }}{{ .Release.OciRegistry.Group }}/{{ end }}{{ .Release.Workspace }}/{{ .Release.Namespace }}/{{ .Release.BuilderName }}/{{ .Values.basic.name }} --version {{ .Values.basic.version }}
+                    \`\`\`
+
+                    The command deploys {{ .Values.basic.name }} on the Kubernetes cluster in the default configuration. The [Parameters](#parameters) section lists the parameters that can be configured during installation.
+
+                    ## Uninstalling the Chart
+
+                    To uninstall/delete the \`my-release\` deployment:
+
+                    \`\`\`shell
+                    helm uninstall my-release
+                    \`\`\`
+
+                    The command removes all the Kubernetes components associated with the chart and deletes the release.
+                    ## Parameters
+
+                    autogenerated by [shipper-platform](https://github.com/lingbohome)
+                    EOF
+
+                
+
+                    helm lint /helmchart/
+                    readme-generator -v /helmchart/values.yaml -r /helmchart/README.md -s /helmchart/values.schema.json
+
+                    helm package /helmchart/        
 
                     packagefilename={{- printf "%s-%s.tgz" .Values.basic.name .Values.basic.version }}
+
+                    helm push $packagefilename  oci://{{ .Release.OciRegistry.Host }}/{{ if .Release.OciRegistry.Group }}{{ .Release.OciRegistry.Group }}/{{ end }}{{ .Release.Workspace }}/{{ .Release.Namespace }}/{{ .Release.BuilderName }}
 
                     sha256_hash=sha256:$(sha256sum "$packagefilename" | awk '{print $1}')
 
@@ -211,14 +404,19 @@ data:
                         schema=https
                     fi
 
-                    mc alias set myoss $schema://{{- .Release.OSS.S3.Endpoint | default "minioserver.example.net" }} {{ .Release.OSS.S3.AccessKey }} {{ .Release.OSS.S3.SecretKey }} 
-                    mc mb myoss/$bucket  --ignore-existing
-                    mc put $packagefilename myoss/$bucket/{{ .Release.Namespace }}/{{ .Release.BuilderName }}/$packagefilename
+                    mc alias set oss $schema://{{- .Release.OSS.S3.Endpoint | default "minioserver.example.net" }} {{ .Release.OSS.S3.AccessKey }} {{ .Release.OSS.S3.SecretKey }} 
+                    mc mb oss/$bucket  --ignore-existing
+                    mc put $packagefilename oss/$bucket/{{ .Release.Namespace }}/{{ .Release.BuilderName }}/$packagefilename
 
                     echo "> helmchart package uploaded..."
                     echo -n "$sha256_hash" | tee "$(results.HELMCHART_PACKAGE_DIGEST.path)"
+                    echo -e "\n"
                     echo -n "{{ .Release.Namespace }}/{{ .Release.BuilderName }}/$packagefilename" | tee "$(results.HELMCHART_PACKAGE_OSSNAME.path)" 
-                    echo -n "$bucket" | tee "$(results.HELMCHART_PACKAGE_BUCKET.path)"                                 
+                    echo -e "\n"
+                    echo -n "$bucket" | tee "$(results.HELMCHART_PACKAGE_BUCKET.path)"  
+
+                    echo -e "\n\nShow helmchart README.md  >>>>"
+                    glow /helmchart/README.md -w 150                              
         finally:
           - name: artifacts-producer
             params:
@@ -248,7 +446,7 @@ data:
                       "description":"基于用户可视化定义元数据，生成的单个无状态服务的helmchart package",
                       "outputs":[
                         {
-                          "name":"{{ .Release.BuilderName }}",
+                          "name":"chart-for-file",
                           "producer":"helmchart-generator",
                           "type":"oss",
                           "format":"helmchart",
@@ -256,13 +454,33 @@ data:
                           "digest":"$(params.HELMCHART_PACKAGE_DIGEST)",
                           "displayName":"$(params.HELMCHART_PACKAGE_BUCKET)/$(params.HELMCHART_PACKAGE_OSSNAME)",
                           "description":""
+                        },
+                        {
+                          "name":"chart-for-oci",
+                          "producer":"helmchart-generator",
+                          "type":"oci",
+                          "format":"helmchart",
+                          "url":"pkg:oci/{{ if .Release.OciRegistry.Group }}{{ .Release.OciRegistry.Group }}/{{ end }}{{ .Release.Workspace }}/{{ .Release.Namespace }}/{{ .Release.BuilderName }}/{{ .Values.basic.name }}@{{ .Values.basic.version }}?repository_url={{ .Release.OciRegistry.Host }}",
+                          "digest":"$(params.HELMCHART_PACKAGE_DIGEST)",
+                          "displayName":"oci://{{ .Release.OciRegistry.Host }}/{{ if .Release.OciRegistry.Group }}{{ .Release.OciRegistry.Group }}/{{ end }}{{ .Release.Workspace }}/{{ .Release.Namespace }}/{{ .Release.BuilderName }}/{{ .Values.basic.name }} --version {{ .Values.basic.version }}",
+                          "description":"install cmd ：helm install my-release oci://xxx..."
                         }
                       ]
                     }
                     EOF
         results:
           - name: shipper-artifacts
-            value: $(finally.artifacts-producer.results.ArtifactInfo)  
+            value: $(finally.artifacts-producer.results.ArtifactInfo)
+        workspaces:
+          - name: dockerconfig-ws
+            description: An optional workspace that allows providing a .docker/config.json.
+            optional: true
+      workspaces:  
+          {{- if .Release.OciRegistry.Credentials }}
+        - name: dockerconfig-ws
+          secret:
+            secretName: {{ .Release.OciRegistry.Credentials }}
+          {{- end }}                         
   values.yaml: |
     resources: 
       limitsCPU: 4
@@ -297,6 +515,69 @@ data:
                     "type": "string",
                     "pattern":"^(0|[1-9]\\d*)\\.(0|[1-9]\\d*)\\.(0|[1-9]\\d*)(\\-[0-9A-Za-z-]+(\\.[0-9A-Za-z-]+)*)?(\\+[0-9A-Za-z-]+(\\.[0-9A-Za-z-]+)*)?$"
                   },
+                  "category": {
+                    "title": "类别/用途",
+                    "description": "对应用程序或服务进行分类和区分，具体的业务服务，一般用[前端]或[后端]来标识，非业务类使用其他更能代表意图的类别标识。",
+                    "type": "string",
+                    "enum": [{
+                        "label": "前端",
+                        "value": "frontend"
+                      },
+                      {
+                        "label": "后端",
+                        "value": "backend"
+                      },
+                      {
+                        "label": "缓存",
+                        "value": "cache"
+                      },
+                      {
+                        "label": "中间件",
+                        "value": "middleware"
+                      },
+                      {
+                        "label": "监控",
+                        "value": "monitoring"
+                      },
+                      {
+                        "label": "数据库",
+                        "value": "database"
+                      },
+                      {
+                        "label": "日志",
+                        "value": "logging"
+                      },
+                      {
+                        "label": "存储",
+                        "value": "storage"
+                      },
+                      {
+                        "label": "网关",
+                        "value": "gateway"
+                      },
+                      {
+                        "label": "认证",
+                        "value": "auth"
+                      },
+                      {
+                        "label": "安全",
+                        "value": "security"
+                      },
+                      {
+                        "label": "其他",
+                        "value": "other"
+                      }
+                    ]
+                  },
+                  "keywords":{
+                    "type": "array",
+                    "title": "功能特性",
+                    "maxItems":3,
+                    "description": "标识您的应用程序或服务所具备的功能特性关键词，最可配3个。",
+                    "items":{
+                      "type":"string"
+                    }
+                  },
                   "description": {
                     "title": "描述",
                     "description": "描述可包含任意字符，最长 256 个字符。",
@@ -312,13 +593,16 @@ data:
             "order": [
                 "name",
                 "aliasName",
-                "version",       
-                "description"
+                "version",
+                "category",       
+                "description",
+                "keywords"
               ],
             "required": [
                 "name",
                 "version",
                 "aliasName",
+                "category",
                 "description"
               ]
           },
