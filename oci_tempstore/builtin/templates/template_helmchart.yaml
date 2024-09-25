@@ -6,7 +6,7 @@ metadata:
   labels:
     shipper.lingbohome.com/managed: "true"
     shipper.lingbohome.com/templated-by: "builder"
-    template.shipper.lingbohome.com/version: "0.2.0"
+    template.shipper.lingbohome.com/version: "0.3.0"
     template.shipper.lingbohome.com/level: "system"
   annotations:
     kubesphere.io/alias-name: helmchart包生成器
@@ -25,7 +25,7 @@ data:
         tekton.dev/tags: helmchart
       generateName: baesd-shipper
       labels:
-        app.kubernetes.io/version: '0.2'
+        app.kubernetes.io/version: '0.3'
         shipper.lingbohome.com/platform: shipper
         shipper.lingbohome.com/useFor: builder
     spec:
@@ -67,19 +67,33 @@ data:
 
                     cat > /helmchart/Chart.yaml << EOF
                     apiVersion: v2
-                    name: {{ .Values.basic.name }}
+                    name: {{ if .Values.basic.followBuilderName }}{{ .Release.BuilderName }}{{- else }}{{ .Values.basic.name | default .Release.BuilderName }}{{- end }}
                     description: {{ .Values.basic.description | quote }}
+                    {{- if .Values.basic.icon }}
+                    icon: {{ .Values.basic.icon | quote }}
+                    {{- end }} 
+                    {{- if .Values.basic.home }}
+                    home: {{ .Values.basic.home | quote }}
+                    {{- end }}
+                    {{- if .Values.basic.maintainers }}
+                    maintainers:
+                      {{- toYaml .Values.basic.maintainers | nindent 18 }}                     
+                    {{- end }}                      
                     type: application
                     version: {{ .Values.basic.version }}
                     appVersion: {{ .Values.basic.version | quote }}
                     annotations:
+                      app.kubesphere.io/category: {{ .Values.basic.category | default "other" | quote }}
                       shipper.lingbohome.com/generate-by: shipper
                       shipper.lingbohome.com/alias-name: {{ .Values.basic.aliasName | quote }}
+                      shipper.lingbohome.com/builder-ref: {{ .Release.BuilderName | quote }}
                     {{- if .Values.basic.keywords }}
                     keywords:
                       {{- toYaml .Values.basic.keywords | nindent 18 }} 
                     {{- end }}   
                     EOF
+
+                    chartname={{- if .Values.basic.followBuilderName }}{{ .Release.BuilderName }}{{- else }}{{ .Values.basic.name | default .Release.BuilderName }}{{- end }}
 
                     cat > /helmchart/values.yaml << EOF
                     ## @section 全局参数
@@ -130,7 +144,7 @@ data:
                     image:
                       registry: {{ .Values.image.registry | default "registry.cn-shanghai.aliyuncs.com" }}
                       repository: {{ .Values.image.repository | default "nginx" }}
-                      tag: {{ .Values.image.tag | default "latest" }}
+                      tag: {{ .Values.image.tag | default "latest" | quote }}
                       pullPolicy: {{ .Values.image.pullPolicy | default "IfNotPresent" }}
 
 
@@ -340,19 +354,19 @@ data:
                     EOF
 
                     cat > /helmchart/README.md << EOF
-                    # {{ .Values.basic.name }}
+                    # $chartname
 
-                    [{{ .Values.basic.name }}](https://github.com/{{ .Values.basic.name }}) {{ .Values.basic.description }}
+                    [$chartname]({{ .Values.basic.home | default "https://github.com/$chartname" }}) {{ .Values.basic.description }}
 
                     ## TL;DR
 
                     \`\`\`shell
-                    helm install myrelease oci://{{ .Release.OciRegistry.Host }}/{{ if .Release.OciRegistry.Group }}{{ .Release.OciRegistry.Group }}/{{ end }}{{ .Release.Workspace }}/{{ .Release.Namespace }}/{{ .Release.BuilderName }}/{{ .Values.basic.name }} --version {{ .Values.basic.version }}
+                    helm install myrelease oci://{{ .Release.OciRegistry.Host }}/{{ if .Release.OciRegistry.Group }}{{ .Release.OciRegistry.Group }}/{{ end }}{{ .Release.Workspace }}/{{ .Release.Namespace }}/helmcharts/$chartname --version {{ .Values.basic.version }}
                     \`\`\`
 
                     ## Introduction
 
-                    This chart bootstraps a {{ .Values.basic.name }} deployment on a [Kubernetes](http://kubernetes.io) cluster using the [Helm](https://helm.sh) package manager.
+                    This chart bootstraps a $chartname deployment on a [Kubernetes](http://kubernetes.io) cluster using the [Helm](https://helm.sh) package manager.
 
                     ## Prerequisites
 
@@ -364,10 +378,10 @@ data:
                     To install the chart with the release name \`my-release\`:
 
                     \`\`\`shell
-                    helm install myrelease oci://{{ .Release.OciRegistry.Host }}/{{ if .Release.OciRegistry.Group }}{{ .Release.OciRegistry.Group }}/{{ end }}{{ .Release.Workspace }}/{{ .Release.Namespace }}/{{ .Release.BuilderName }}/{{ .Values.basic.name }} --version {{ .Values.basic.version }}
+                    helm install myrelease oci://{{ .Release.OciRegistry.Host }}/{{ if .Release.OciRegistry.Group }}{{ .Release.OciRegistry.Group }}/{{ end }}{{ .Release.Workspace }}/{{ .Release.Namespace }}/helmcharts/$chartname --version {{ .Values.basic.version }}
                     \`\`\`
 
-                    The command deploys {{ .Values.basic.name }} on the Kubernetes cluster in the default configuration. The [Parameters](#parameters) section lists the parameters that can be configured during installation.
+                    The command deploys $chartname on the Kubernetes cluster in the default configuration. The [Parameters](#parameters) section lists the parameters that can be configured during installation.
 
                     ## Uninstalling the Chart
 
@@ -390,14 +404,14 @@ data:
 
                     helm package /helmchart/        
 
-                    packagefilename={{- printf "%s-%s.tgz" .Values.basic.name .Values.basic.version }}
+                    packagefilename="${chartname}{{- printf "-%s.tgz" .Values.basic.version }}"
 
-                    helm push $packagefilename  oci://{{ .Release.OciRegistry.Host }}/{{ if .Release.OciRegistry.Group }}{{ .Release.OciRegistry.Group }}/{{ end }}{{ .Release.Workspace }}/{{ .Release.Namespace }}/{{ .Release.BuilderName }}
+                    helm push $packagefilename  oci://{{ .Release.OciRegistry.Host }}/{{ if .Release.OciRegistry.Group }}{{ .Release.OciRegistry.Group }}/{{ end }}{{ .Release.Workspace }}/{{ .Release.Namespace }}/helmcharts
 
                     sha256_hash=sha256:$(sha256sum "$packagefilename" | awk '{print $1}')
 
                     usehttps={{- .Release.OSS.S3.UseHttps | default "false" }}
-                    bucket={{ .Release.Workspace | default "helm-chart" }}
+                    bucket={{ .Release.Workspace | default "helm-charts" }}
                     schema=http
 
                     if [ "$usehttps" = true ]; then
@@ -408,6 +422,21 @@ data:
                     mc mb oss/$bucket  --ignore-existing
                     mc put $packagefilename oss/$bucket/{{ .Release.Namespace }}/{{ .Release.BuilderName }}/$packagefilename
 
+
+                    indexkey=oss/$bucket/{{ .Release.Namespace }}/helmcharts/index.yaml
+                    if mc stat "$indexkey" > /dev/null 2>&1; then
+                        echo "index.yaml exists"
+                        onlineindex="/tmp/index.yaml"
+                        mc cp "$indexkey" "$onlineindex"
+                        helm repo index  --url $schema://{{- .Release.OSS.S3.Endpoint | default "minioserver.example.net" }}/$bucket/{{ .Release.Namespace }}/{{ .Release.BuilderName }}  --merge $onlineindex .
+                    else
+                        echo "index.yaml does not exist"
+                        helm repo index  --url $schema://{{- .Release.OSS.S3.Endpoint | default "minioserver.example.net" }}/$bucket/{{ .Release.Namespace }}/{{ .Release.BuilderName }}  .
+                    fi
+
+                    mc put index.yaml $indexkey
+
+                    echo "> helmchart index.yaml uploaded..."
                     echo "> helmchart package uploaded..."
                     echo -n "$sha256_hash" | tee "$(results.HELMCHART_PACKAGE_DIGEST.path)"
                     echo -e "\n"
@@ -460,9 +489,9 @@ data:
                           "producer":"helmchart-generator",
                           "type":"oci",
                           "format":"helmchart",
-                          "url":"pkg:oci/{{ if .Release.OciRegistry.Group }}{{ .Release.OciRegistry.Group }}/{{ end }}{{ .Release.Workspace }}/{{ .Release.Namespace }}/{{ .Release.BuilderName }}/{{ .Values.basic.name }}@{{ .Values.basic.version }}?repository_url={{ .Release.OciRegistry.Host }}",
+                          "url":"pkg:oci/{{ if .Release.OciRegistry.Group }}{{ .Release.OciRegistry.Group }}/{{ end }}{{ .Release.Workspace }}/{{ .Release.Namespace }}/helmcharts/{{- if .Values.basic.followBuilderName }}{{ .Release.BuilderName }}{{- else }}{{ .Values.basic.name | default .Release.BuilderName }}{{- end }}@{{ .Values.basic.version }}?repository_url={{ .Release.OciRegistry.Host }}",
                           "digest":"$(params.HELMCHART_PACKAGE_DIGEST)",
-                          "displayName":"oci://{{ .Release.OciRegistry.Host }}/{{ if .Release.OciRegistry.Group }}{{ .Release.OciRegistry.Group }}/{{ end }}{{ .Release.Workspace }}/{{ .Release.Namespace }}/{{ .Release.BuilderName }}/{{ .Values.basic.name }} --version {{ .Values.basic.version }}",
+                          "displayName":"oci://{{ .Release.OciRegistry.Host }}/{{ if .Release.OciRegistry.Group }}{{ .Release.OciRegistry.Group }}/{{ end }}{{ .Release.Workspace }}/{{ .Release.Namespace }}/helmcharts/{{- if .Values.basic.followBuilderName }}{{ .Release.BuilderName }}{{- else }}{{ .Values.basic.name | default .Release.BuilderName }}{{- end }} --version {{ .Values.basic.version }}",
                           "description":"install cmd ：helm install my-release oci://xxx..."
                         }
                       ]
@@ -482,6 +511,8 @@ data:
             secretName: {{ .Release.OciRegistry.Credentials }}
           {{- end }}                         
   values.yaml: |
+    basic:
+      followBuilderName: true
     resources: 
       limitsCPU: 4
       limitsMemory: 4
@@ -495,12 +526,25 @@ data:
             "title": "基本信息",
             "type": "object",
             "properties":{
+                "followBuilderName": {
+                  "title": "名称",
+                  "description": "是否将chart的名称与构建器名称保持一致",
+                  "type": "boolean",
+                  "x-shipper-ui": {
+                      "tooltip": "跟随构建器"
+                    }
+                },
                 "name": {
-                    "title": "名称",
+                    "title": "设置名称",
                     "description": "设置helmchart的package名称，只能包含小写字母、数字和连字符（-），必须以小写字母开头并以小写字母或数字结尾，最长 63 个字符",
                     "type": "string",
                     "pattern":"[a-z]([-a-z0-9]*[a-z0-9])?",
-                    "maxLength": 63
+                    "maxLength": 63,
+                    "x-shipper-ui": {
+                      "visibleIf":{
+                        "followBuilderName": "false"
+                      }
+                    }
                   },
                   "aliasName": {
                     "title": "别名",
@@ -564,6 +608,10 @@ data:
                         "value": "security"
                       },
                       {
+                        "label": "网络",
+                        "value": "networking"
+                      },                      
+                      {
                         "label": "其他",
                         "value": "other"
                       }
@@ -588,17 +636,70 @@ data:
                       "placeholder": "写个描述吧...",
                       "maxRows": 3
                     }
+                  },
+                  "home": {
+                    "title": "主页",
+                    "description": "配置项目的主页地址,eg：https://www.example.com",
+                    "type": "string",
+                    "maxLength": 128,
+                    "pattern":"^(https?:\\/\\/)?([\\w.-]+)([\\/\\w\\.-]*)*\\/?$"
+                  },
+                  "icon": {
+                    "title": "icon",
+                    "description": "用做项目icon的SVG或PNG图片URL",
+                    "type": "string",
+                    "maxLength": 256,
+                    "pattern":"^(https?:\\/\\/)?([\\w.-]+)([\\/\\w\\.-]*)*\\/?$"
+                  },
+                  "maintainers": {
+                    "title": "配置chart的作者",
+                    "description": "配置chart的维护者信息",
+                    "type": "array",
+                    "maxItems": 3,
+                    "items":{
+                      "type":"object",
+                      "properties": {
+                        "name": {
+                          "title": "维护者名称",
+                          "type": "string",
+                          "maxLength": 15,
+                          "description": "维护者名称，必填"
+                        },
+                        "email": {
+                          "title": "维护者邮箱",
+                          "description": "维护者邮箱，可选",
+                          "type": "string",
+                          "pattern":"^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$"
+                        },
+                        "url": {
+                          "title": "维护者URL",
+                          "description": "维护者URL，可选",
+                          "type": "string",
+                          "pattern":"^(https?:\\/\\/)?([\\w.-]+)([\\/\\w\\.-]*)*\\/?$",
+                          "x-shipper-ui": {
+                            "placeholder": "如：https://github.com/lingbohome"
+                          }
+                        }
+                      },
+                      "order":["name","email","url"],
+                      "required":["name"]
+                    }
                   }
             },
             "order": [
+                "followBuilderName",
                 "name",
                 "aliasName",
                 "version",
+                "home",
+                "icon",
                 "category",       
                 "description",
-                "keywords"
+                "keywords",
+                "maintainers"
               ],
             "required": [
+                "followBuilderName",
                 "name",
                 "version",
                 "aliasName",
