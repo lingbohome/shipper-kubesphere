@@ -6,12 +6,12 @@ metadata:
   labels:
     shipper.lingbohome.com/managed: "true"
     shipper.lingbohome.com/templated-by: "builder"
-    template.shipper.lingbohome.com/version: "0.3.0"
+    template.shipper.lingbohome.com/version: "0.3.1"
     template.shipper.lingbohome.com/level: "system"
   annotations:
     kubesphere.io/alias-name: helmchart包生成器
     kubesphere.io/creator: system
-    kubesphere.io/description: 基于用户可视化定义服务元数据，快速生成helmchart package
+    kubesphere.io/description: "基于用户可视化定义服务元数据，快速生成helmchart package,并支持同时推送到chart的经典仓库和oci仓库"
     cert.shipper.lingbohome.com/scope: "oss,oci"
 data:
   template.yaml: |
@@ -45,7 +45,10 @@ data:
               results:
                 - description: The digest of the built `HELMCHART_PACKAGE`.
                   name: HELMCHART_PACKAGE_DIGEST
-                  type: string 
+                  type: string
+                - description: The oci digest of the built `HELMCHART_PACKAGE`.
+                  name: HELMCHART_PACKAGE_OCI_DIGEST
+                  type: string                    
                 - description: The oss name of the built `HELMCHART_PACKAGE`.
                   name: HELMCHART_PACKAGE_OSSNAME
                   type: string
@@ -406,7 +409,11 @@ data:
 
                     packagefilename="${chartname}{{- printf "-%s.tgz" .Values.basic.version }}"
 
-                    helm push $packagefilename  oci://{{ .Release.OciRegistry.Host }}/{{ if .Release.OciRegistry.Group }}{{ .Release.OciRegistry.Group }}/{{ end }}{{ .Release.Workspace }}/{{ .Release.Namespace }}/helmcharts
+                    chartdigest=$(helm push $packagefilename  oci://{{ .Release.OciRegistry.Host }}/{{ if .Release.OciRegistry.Group }}{{ .Release.OciRegistry.Group }}/{{ end }}{{ .Release.Workspace }}/{{ .Release.Namespace }}/helmcharts 2>&1)
+
+                    echo -e "$chartdigest"
+
+                    sha256_digest=$(echo -e "$chartdigest" | grep -o 'Digest: sha256:[a-fA-F0-9]\{64\}' | sed 's/Digest: //')
 
                     sha256_hash=sha256:$(sha256sum "$packagefilename" | awk '{print $1}')
 
@@ -439,6 +446,7 @@ data:
                     echo "> helmchart index.yaml uploaded..."
                     echo "> helmchart package uploaded..."
                     echo -n "$sha256_hash" | tee "$(results.HELMCHART_PACKAGE_DIGEST.path)"
+                    echo -n "$sha256_digest" | tee "$(results.HELMCHART_PACKAGE_OCI_DIGEST.path)"
                     echo -e "\n"
                     echo -n "{{ .Release.Namespace }}/{{ .Release.BuilderName }}/$packagefilename" | tee "$(results.HELMCHART_PACKAGE_OSSNAME.path)" 
                     echo -e "\n"
@@ -451,6 +459,8 @@ data:
             params:
               - name: HELMCHART_PACKAGE_DIGEST
                 value: "$(tasks.helmchart-generator.results.HELMCHART_PACKAGE_DIGEST)"
+              - name: HELMCHART_PACKAGE_OCI_DIGEST
+                value: "$(tasks.helmchart-generator.results.HELMCHART_PACKAGE_OCI_DIGEST)"                
               - name: HELMCHART_PACKAGE_OSSNAME
                 value: "$(tasks.helmchart-generator.results.HELMCHART_PACKAGE_OSSNAME)" 
               - name: HELMCHART_PACKAGE_BUCKET
@@ -460,6 +470,7 @@ data:
                       A simple task that populates artifacts to TaskRun result
               params:
                 - name: HELMCHART_PACKAGE_DIGEST
+                - name: HELMCHART_PACKAGE_OCI_DIGEST
                 - name: HELMCHART_PACKAGE_OSSNAME 
                 - name: HELMCHART_PACKAGE_BUCKET                                       
               results:
@@ -490,7 +501,7 @@ data:
                           "type":"oci",
                           "format":"helmchart",
                           "url":"pkg:oci/{{ if .Release.OciRegistry.Group }}{{ .Release.OciRegistry.Group }}/{{ end }}{{ .Release.Workspace }}/{{ .Release.Namespace }}/helmcharts/{{- if .Values.basic.followBuilderName }}{{ .Release.BuilderName }}{{- else }}{{ .Values.basic.name | default .Release.BuilderName }}{{- end }}@{{ .Values.basic.version }}?repository_url={{ .Release.OciRegistry.Host }}",
-                          "digest":"$(params.HELMCHART_PACKAGE_DIGEST)",
+                          "digest":"$(params.HELMCHART_PACKAGE_OCI_DIGEST)",
                           "displayName":"oci://{{ .Release.OciRegistry.Host }}/{{ if .Release.OciRegistry.Group }}{{ .Release.OciRegistry.Group }}/{{ end }}{{ .Release.Workspace }}/{{ .Release.Namespace }}/helmcharts/{{- if .Values.basic.followBuilderName }}{{ .Release.BuilderName }}{{- else }}{{ .Values.basic.name | default .Release.BuilderName }}{{- end }} --version {{ .Values.basic.version }}",
                           "description":"install cmd ：helm install my-release oci://xxx..."
                         }
