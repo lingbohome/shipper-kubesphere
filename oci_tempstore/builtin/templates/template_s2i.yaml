@@ -6,7 +6,7 @@ metadata:
   labels:
     shipper.lingbohome.com/managed: "true"
     shipper.lingbohome.com/templated-by: "builder"
-    template.shipper.lingbohome.com/version: "0.2.1"
+    template.shipper.lingbohome.com/version: "0.2.2"
     template.shipper.lingbohome.com/level: "system"
   annotations:
     kubesphere.io/alias-name: 源码构建镜像
@@ -48,7 +48,7 @@ data:
           value: {{ .Values.sourceDockerfilePath | default "./Dockerfile" }}
         - name: ENV_VARS
           value:
-            - BP_DEPENDENCY_MIRROR_ARTIFACTS_PAKETO_IO=https://mirror.lingbohome.com/{originalHost}
+            - BP_DEPENDENCY_MIRROR_ARTIFACTS_PAKETO_IO=https://oss.cloud.lingbohome.com/buildpack-dependencies/{originalHost}
         - name: EXTRA_ARGS
           value: []
         - name: PROCESS_TYPE
