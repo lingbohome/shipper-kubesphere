@@ -6,7 +6,7 @@ metadata:
   labels:
     shipper.lingbohome.com/managed: "true"
     shipper.lingbohome.com/templated-by: "builder"
-    template.shipper.lingbohome.com/version: "0.2.2"
+    template.shipper.lingbohome.com/version: "0.2.3"
     template.shipper.lingbohome.com/level: "system"
   annotations:
     kubesphere.io/alias-name: 源码构建镜像
@@ -365,7 +365,7 @@ data:
                 - description: The name of where to store the app image.
                   name: APP_IMAGE
                   type: string
-                - default: registry.cn-shanghai.aliyuncs.com/kube-shipper/paketo-cnb-builder-jammy-base:0.4.265
+                - default: registry.cn-shanghai.aliyuncs.com/kube-shipper/paketo-cnb-builder-jammy-base:0.4.321
                   description: The image on which builds will run (must include lifecycle and compatible buildpacks).
                   name: BUILDER_IMAGE
                   type: string
@@ -381,7 +381,7 @@ data:
                   description: The default process type to set on the image.
                   name: PROCESS_TYPE
                   type: string
-                - default: 'registry.cn-shanghai.aliyuncs.com/kube-shipper/paketo-cnb-run-jammy-base:0.1.94'
+                - default: 'registry.cn-shanghai.aliyuncs.com/kube-shipper/paketo-cnb-run-jammy-base:0.1.124'
                   description: Reference to a run image to use.
                   name: RUN_IMAGE
                   type: string
