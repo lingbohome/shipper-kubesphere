@@ -16,7 +16,7 @@ spec:
         - name: pre-install-job
           image: "registry.cn-shanghai.aliyuncs.com/kube-shipper/kubectl:v1.27.4"
           command: ["/bin/bash","-c","\n
-            for NS in shipper-system tekton-pipelines; \n
+            for NS in shipper-system tekton-pipelines tekton-pipelines-resolvers; \n
             do \n
               if kubectl get namespace $NS &>/dev/null; then \n
                 echo \"Namespace $NS already exists. Skipping...\" \n

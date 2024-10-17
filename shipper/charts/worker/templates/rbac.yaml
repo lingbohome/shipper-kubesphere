@@ -525,3 +525,85 @@ roleRef:
   kind: Role
   name: tekton-pipelines-leader-election
   apiGroup: rbac.authorization.k8s.io
+
+
+---
+### tekton-pipelines-resolvers rbac  
+
+kind: ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  # ClusterRole for resolvers to monitor and update resolutionrequests.
+  name: tekton-pipelines-resolvers-resolution-request-updates
+  labels:
+    app.kubernetes.io/component: resolvers
+    app.kubernetes.io/instance: default
+    app.kubernetes.io/part-of: tekton-pipelines
+rules:
+  - apiGroups: ["resolution.tekton.dev"]
+    resources: ["resolutionrequests", "resolutionrequests/status"]
+    verbs: ["get", "list", "watch", "update", "patch"]
+  - apiGroups: ["tekton.dev"]
+    resources: ["tasks", "pipelines"]
+    verbs: ["get", "list"]
+  # Read-only access to these.
+  - apiGroups: [""]
+    resources: ["secrets"]
+    verbs: ["get", "list", "watch"]
+
+---
+kind: Role
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: tekton-pipelines-resolvers-namespace-rbac
+  namespace: tekton-pipelines-resolvers
+  labels:
+    app.kubernetes.io/component: resolvers
+    app.kubernetes.io/instance: default
+    app.kubernetes.io/part-of: tekton-pipelines
+rules:
+  # Needed to watch and load configuration and secret data.
+  - apiGroups: [""]
+    resources: ["configmaps", "secrets"]
+    verbs: ["get", "list", "update", "watch"]
+  # This is needed by leader election to run the controller in HA.
+  - apiGroups: ["coordination.k8s.io"]
+    resources: ["leases"]
+    verbs: ["get", "list", "create", "update", "delete", "patch", "watch"]    
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: tekton-pipelines-resolvers
+  labels:
+    app.kubernetes.io/component: resolvers
+    app.kubernetes.io/instance: default
+    app.kubernetes.io/part-of: tekton-pipelines
+subjects:
+  - kind: ServiceAccount
+    name: tekton-pipelines-resolvers
+    namespace: tekton-pipelines-resolvers
+roleRef:
+  kind: ClusterRole
+  name: tekton-pipelines-resolvers-resolution-request-updates
+  apiGroup: rbac.authorization.k8s.io  
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: tekton-pipelines-resolvers-namespace-rbac
+  namespace: tekton-pipelines-resolvers
+  labels:
+    app.kubernetes.io/component: resolvers
+    app.kubernetes.io/instance: default
+    app.kubernetes.io/part-of: tekton-pipelines
+subjects:
+  - kind: ServiceAccount
+    name: tekton-pipelines-resolvers
+    namespace: tekton-pipelines-resolvers
+roleRef:
+  kind: Role
+  name: tekton-pipelines-resolvers-namespace-rbac
+  apiGroup: rbac.authorization.k8s.io    

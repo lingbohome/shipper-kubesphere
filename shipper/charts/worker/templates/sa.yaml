@@ -27,3 +27,14 @@ metadata:
     app.kubernetes.io/component: events
     app.kubernetes.io/instance: default
     app.kubernetes.io/part-of: tekton-pipelines
+---
+### tekton-pipelines-resolvers sa 
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: tekton-pipelines-resolvers
+  namespace: tekton-pipelines-resolvers
+  labels:
+    app.kubernetes.io/component: resolvers
+    app.kubernetes.io/instance: default
+    app.kubernetes.io/part-of: tekton-pipelines

@@ -13,6 +13,9 @@ image:
   webhook:
     repository: tektoncd-pipeline-webhook
     tag: v0.54.0
+  resolvers:
+    repository: tektoncd-pipeline-resolvers
+    tag: v0.54.2    
   entrypoint:
     repository: tektoncd-pipeline-entrypoint
     tag: v0.54.0
