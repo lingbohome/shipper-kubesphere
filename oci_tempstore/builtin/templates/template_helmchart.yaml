@@ -6,7 +6,7 @@ metadata:
   labels:
     shipper.lingbohome.com/managed: "true"
     shipper.lingbohome.com/templated-by: "builder"
-    template.shipper.lingbohome.com/version: "0.3.1"
+    template.shipper.lingbohome.com/version: "0.4.0"
     template.shipper.lingbohome.com/level: "system"
   annotations:
     kubesphere.io/alias-name: helmchart包生成器
@@ -62,7 +62,7 @@ data:
                   optional: true                                                     
               steps:            
                 - computeResources: {}
-                  image: registry.cn-shanghai.aliyuncs.com/kube-shipper/helmchart-generator:0.2.3
+                  image: registry.cn-shanghai.aliyuncs.com/kube-shipper/helmchart-generator:0.3.0
                   name: generate
                   script: |
                     #!/usr/bin/env bash
@@ -294,6 +294,26 @@ data:
                         {{- if .Values.advanced.enabledAppConfig -}}
                         {{ .Values.advanced.fileContentOfAppConfig | default "" | nindent 20 }}
                         {{- end }}
+
+                    dataVolume:
+                      ## @param dataVolume.enabled 是否设置服务的数据卷
+                      ##
+                      enabled: {{ .Values.advanced.enabledDataVolume | default false }}
+                      ## @param dataVolume.mountPath 数据卷挂载路径
+                      ##  
+                      mountPath: {{ if .Values.advanced.enabledDataVolume }}{{ .Values.advanced.dataVolume.mountPath | default "/data" }}{{- else }}"/data"{{- end }}
+                      ## @param dataVolume.subPath 指定挂载数据卷中的子路径
+                      ##  
+                      subPath: {{ if .Values.advanced.enabledDataVolume }}{{ .Values.advanced.dataVolume.subPath | default "" }}{{- else }}""{{- end }}
+                      ## @param dataVolume.accessMode 指定数据卷访问模式
+                      ##  
+                      accessMode: {{ if .Values.advanced.enabledDataVolume }}{{ .Values.advanced.dataVolume.accessMode | default "ReadWriteOnce" }}{{- else }}"ReadWriteOnce"{{- end }}
+                      ## @param dataVolume.requestStorage 指定数据卷申请的容量
+                      ##  
+                      requestStorage: {{ if .Values.advanced.enabledDataVolume }}{{ .Values.advanced.dataVolume.requestStorage | default 10 }}{{- else }}10{{- end }}
+                      ## @param dataVolume.storageClassName 指定创建数据卷的存储类
+                      ##  
+                      storageClassName: {{ if .Values.advanced.enabledDataVolume }}{{ .Values.advanced.dataVolume.storageClassName | default "" }}{{- else }}""{{- end }}                              
 
 
                     ## @param replicaCount 部署副本数
@@ -1128,7 +1148,112 @@ data:
                           "enabledAppConfig":"true"
                         }
                       }
-                  },                                                         
+                  },
+                  "enabledDataVolume": {
+                    "title": "设置应用的数据卷",
+                    "description": "设置后，将会将数据卷挂载到您的应用容器内",
+                    "type": "boolean",
+                    "x-shipper-ui": {
+                        "tooltip": "设置"
+                      }
+                  },
+                  "dataVolume": {
+                    "title": "数据卷",
+                    "description": "配置应用或服务的数据存储卷",
+                    "type": "object",
+                    "properties": {
+                        "mountPath": {
+                          "title": "数据卷挂载路径",
+                          "description": "路径为服务容器内，比如：/data",
+                          "type": "string"
+                        },
+                        "subPath": {
+                          "title": "挂载子路径",
+                          "description": "指定挂载数据卷中的子路径",
+                          "type": "string"
+                        }, 
+                        "accessMode": {
+                          "title": "访问模式",
+                          "description": "指定数据卷访问模式",
+                          "type": "string",
+                          "enum": [{
+                              "label": "ReadWriteOnce",
+                              "value": "ReadWriteOnce"
+                            },
+                            {
+                              "label": "ReadOnlyMany",
+                              "value": "ReadOnlyMany"
+                            },
+                            {
+                              "label": "ReadWriteMany",
+                              "value": "ReadWriteMany"
+                            }
+                          ]                          
+                        }, 
+                        "requestStorage": {
+                          "title": "卷容量",
+                          "description": "指定数据卷申请的容量",
+                          "type": "integer",
+                          "minimum": 1,
+                          "maximum": 112,
+                          "x-shipper-ui": {
+                              "widget": "slider",
+                              "step":1,
+                              "marks":[{
+                                "label": "1Gi",
+                                "value": 1
+                              },
+                              {
+                                "label": "16Gi",
+                                "value": 16
+                              },          {
+                                "label": "32Gi",
+                                "value": 32
+                              },   {
+                                "label": "48Gi",
+                                "value": 48
+                              },{
+                                  "label": "64Gi",
+                                  "value": 64
+                                },
+                                {
+                                  "label": "80Gi",
+                                  "value": 80
+                                },          {
+                                  "label": "96Gi",
+                                  "value": 96
+                                },   {
+                                  "label": "112Gi",
+                                  "value": 112
+                                }
+                              ]
+                            }                          
+                        },
+                        "storageClassName": {
+                          "title": "存储类名",
+                          "description": "指定创建数据卷的存储类，不设置时，使用集群管理员配置的默认存储类",
+                          "type": "string"
+                        }                                                                                                                      
+                    },
+                    "x-shipper-ui": {
+                        "visibleIf":{
+                           "enabledDataVolume":"true"
+                         }
+                    },
+                    "order": [
+                      "mountPath",
+                      "maxReplicas",
+                      "targetCPUUtilizationPercentage",
+                      "targetMemoryUtilizationPercentage"
+                    ],
+                    "required": [
+                      "mountPath",
+                      "subPath",
+                      "accessMode",
+                      "storageClassName",
+                      "requestStorage"
+                    ]                                      
+                  },                                                                                             
                 "startEntrySetting": {
                     "title": "服务启动入口设置",
                     "type": "object",
@@ -1310,6 +1435,8 @@ data:
                 "enabledHealthCheck",
                 "httpPathOfHealthCheck",
                 "enabledAppConfig",
+                "enabledDataVolume",
+                "dataVolume",
                 "mountPathOfAppConfig",
                 "fileNameOfAppConfig",
                 "fileContentOfAppConfig",
