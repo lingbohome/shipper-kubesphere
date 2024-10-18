@@ -6,7 +6,7 @@ metadata:
   labels:
     shipper.lingbohome.com/managed: "true"
     shipper.lingbohome.com/templated-by: "builder"
-    template.shipper.lingbohome.com/version: "0.4.0"
+    template.shipper.lingbohome.com/version: "0.4.1"
     template.shipper.lingbohome.com/level: "system"
   annotations:
     kubesphere.io/alias-name: helmchart包生成器
@@ -1169,8 +1169,11 @@ data:
                         },
                         "subPath": {
                           "title": "挂载子路径",
-                          "description": "指定挂载数据卷中的子路径",
-                          "type": "string"
+                          "description": "根据需要，指定挂载数据卷中的子路径 [可选]",
+                          "type": "string",
+                          "x-shipper-ui": {
+                            "placeholder": "如：subdir1/subdir2"
+                          }
                         }, 
                         "accessMode": {
                           "title": "访问模式",
@@ -1242,15 +1245,14 @@ data:
                     },
                     "order": [
                       "mountPath",
-                      "maxReplicas",
-                      "targetCPUUtilizationPercentage",
-                      "targetMemoryUtilizationPercentage"
+                      "accessMode",
+                      "requestStorage",
+                      "subPath",
+                      "storageClassName"
                     ],
                     "required": [
                       "mountPath",
-                      "subPath",
                       "accessMode",
-                      "storageClassName",
                       "requestStorage"
                     ]                                      
                   },                                                                                             
