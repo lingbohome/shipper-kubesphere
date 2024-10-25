@@ -33,12 +33,19 @@ image:
     tag: latest
   powershell:
     repository: powershell
-    tag: nanoserver                            
+    tag: nanoserver
+  kubectl:
+    repository: kubectl
+    tag: v1.27.4                                 
   pullPolicy: IfNotPresent
 
 imagePullSecrets: []
 
 nameOverride: ""
 fullnameOverride: ""
+
+crds:
+  disableUpgrade: false
+
 
 

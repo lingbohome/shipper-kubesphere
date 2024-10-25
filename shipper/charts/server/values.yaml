@@ -2,7 +2,10 @@ image:
   registry: registry.cn-shanghai.aliyuncs.com/kube-shipper
   server:
     repository: shipper-server
-    tag: v0.2.0
+    tag: v0.2.2
+  kubectl:
+    repository: kubectl
+    tag: v1.27.4      
   pullPolicy: IfNotPresent
 imagePullSecrets: []
 
@@ -63,3 +66,6 @@ serviceAccount:
   # The name of the service account to use.
   # If not set and create is true, a name is generated using the fullname template
   name: "shipper-sa"
+
+crds:
+  disableUpgrade: false  
