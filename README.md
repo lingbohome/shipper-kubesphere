@@ -1,16 +1,22 @@
 # shipper-kubesphere
 shipper的kubesphere扩展组件
 
-### 打包模板
+### 打包扩展
 
 ```
-helm package ./oci_tempstore/builtin/
+ksbuilder package shipper
 ```
 
-### 推送模板到OCIRegistry
+### 推送到扩展市场
 
 ```
-helm push builtin-0.1.0.tgz  --insecure-skip-tls-verify  oci://hub.cloud.lingbohome.com/shipper/template-store
+ksbuilder publish shipper-0.2.3.tgz
+```
+
+### 发布扩展
+
+```
+ksbuilder push shipper-0.2.3.tgz
 ```
 
 
