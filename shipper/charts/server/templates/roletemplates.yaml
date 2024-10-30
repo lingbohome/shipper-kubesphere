@@ -1,0 +1,60 @@
+apiVersion: iam.kubesphere.io/v1beta1
+kind: RoleTemplate
+metadata:
+  annotations:
+    iam.kubesphere.io/role-template-rules: '{"buildtemplates": "view"}'
+  labels:
+    iam.kubesphere.io/category: global-shipper-management
+    iam.kubesphere.io/scope: "global"
+    kubesphere.io/managed: 'true'
+    shipper.lingbohome.com/rbac: 'true'
+  name: global-view-shipper-buildtemplates
+spec:
+  description:
+    en: 'View shipper build templates.'
+    zh: '查看云交付模板仓库中的构建模板。'
+  displayName:
+    en: Buildtemplates Viewing
+    zh: '构建模板查看'
+  rules:
+    - apiGroups:
+        - 'resource.lingbohome.com'
+      resources:
+        - buildtemplates
+      verbs:
+        - get
+        - list
+        - watch
+
+---
+
+apiVersion: iam.kubesphere.io/v1beta1
+kind: RoleTemplate
+metadata:
+  annotations:
+    iam.kubesphere.io/role-template-rules: '{"artifacts": "export"}'
+  labels:
+    iam.kubesphere.io/category: global-shipper-management
+    iam.kubesphere.io/scope: "global"
+    kubesphere.io/managed: 'true'
+    shipper.lingbohome.com/rbac: 'true'
+  name: global-export-shipper-artifacts
+spec:
+  description:
+    en: 'Export shipper artifacts.'
+    zh: '导出云交付的制品内容或文件。'
+  displayName:
+    en: Artifacts Exporting
+    zh: '制品导出'
+  rules:
+    - apiGroups:
+        - 'resource.lingbohome.com'
+      resources:
+        - artifacts
+        - artifacts/export
+        - artifacts/outputs
+      verbs:
+        - get
+        - list
+        - watch
+        - create 

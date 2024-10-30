@@ -1,0 +1,12 @@
+apiVersion: iam.kubesphere.io/v1beta1
+kind: Category
+metadata:
+  labels:
+    iam.kubesphere.io/scope: "global"
+    kubesphere.io/managed: 'true'
+    shipper.lingbohome.com/rbac: 'true'
+  name: global-shipper-management
+spec:
+  displayName:
+    en: Shipper
+    zh: '云交付'

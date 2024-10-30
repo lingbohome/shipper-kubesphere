@@ -34,7 +34,13 @@ rules:
     resources: 
       - '*'
     verbs: 
-      - '*'                             
+      - '*'
+  - apiGroups: 
+      - 'iam.kubesphere.io'
+    resources: 
+      - '*'
+    verbs: 
+      - '*'                                     
 
 ---
 kind: Role
