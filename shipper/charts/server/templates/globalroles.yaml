@@ -8,6 +8,10 @@ metadata:
     kubesphere.io/description: '{"zh": "创建企业空间并成为所创建的企业空间的管理员（包括云交付涉及的平台级资源权限）。", "en": "Create workspaces and become an administrator of the created workspaces (Includes platform-level resource permissions involved in cloud delivery)."}'
   name: platform-self-provisioner-shipper
 aggregationRoleTemplates:
+  roleSelector:
+    matchLabels:
+      shipper.lingbohome.com/rbac: 'true'
+      iam.kubesphere.io/scope: "global"
   templateNames:
     - global-view-shipper-buildtemplates
     - global-export-shipper-artifacts
@@ -26,6 +30,10 @@ metadata:
     kubesphere.io/description: '{"zh": "被邀请加入企业空间之前无法访问任何资源（云交付涉及的平台级资源权限除外）。", "en": "Cannot access any resources before joining a workspace (Except for platform-level resource permissions involved in cloud delivery)."}'
   name: platform-regular-shipper
 aggregationRoleTemplates:
+  roleSelector:
+    matchLabels:
+      shipper.lingbohome.com/rbac: 'true'
+      iam.kubesphere.io/scope: "global"
   templateNames:
     - global-view-shipper-buildtemplates
     - global-export-shipper-artifacts
