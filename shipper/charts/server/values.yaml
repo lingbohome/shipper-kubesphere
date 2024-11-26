@@ -2,7 +2,7 @@ image:
   registry: registry.cn-shanghai.aliyuncs.com/kube-shipper
   server:
     repository: shipper-server
-    tag: v0.2.2
+    tag: v0.2.3-7cdc1ff
   kubectl:
     repository: kubectl
     tag: v1.27.4      

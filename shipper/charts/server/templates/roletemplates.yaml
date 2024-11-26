@@ -58,3 +58,33 @@ spec:
         - list
         - watch
         - create 
+
+---
+
+apiVersion: iam.kubesphere.io/v1beta1
+kind: RoleTemplate
+metadata:
+  annotations:
+    iam.kubesphere.io/role-template-rules: '{"category": "*"}'
+  labels:
+    iam.kubesphere.io/category: global-shipper-management
+    iam.kubesphere.io/scope: "global"
+    kubesphere.io/managed: 'true'
+    shipper.lingbohome.com/rbac: 'true'
+  name: global-view-shipper-categories
+spec:
+  description:
+    en: 'View shipper categories.'
+    zh: '查看云构建模板类别。'
+  displayName:
+    en: 'View shipper categories'
+    zh: '模板类别查看'
+  rules:
+    - apiGroups:
+        - 'shipper.lingbohome.com'
+      resources:
+        - categories
+      verbs:
+        - get
+        - list
+        - watch
