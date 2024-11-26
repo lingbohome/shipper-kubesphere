@@ -88,3 +88,33 @@ spec:
         - get
         - list
         - watch
+
+---
+
+apiVersion: iam.kubesphere.io/v1beta1
+kind: RoleTemplate
+metadata:
+  annotations:
+    iam.kubesphere.io/role-template-rules: '{"buildtemplates": "*"}'
+  labels:
+    iam.kubesphere.io/category: global-shipper-management
+    iam.kubesphere.io/scope: "global"
+    kubesphere.io/managed: 'true'
+    shipper.lingbohome.com/rbac: 'true'
+  name: global-view-shipper-templates-withcm
+spec:
+  description:
+    en: 'View shipper templates.'
+    zh: '查看云构建模板。'
+  displayName:
+    en: 'View shipper templates'
+    zh: '云模板查看'
+  rules:
+    - apiGroups:
+        - 'resources.kubesphere.io'
+      resources:
+        - configmaps
+      verbs:
+        - get
+        - list
+        - watch
