@@ -11,3 +11,17 @@ spec:
 status:
   state: Available
   link: /dist/shipper-ui/index.js
+
+---
+
+apiVersion: extensions.kubesphere.io/v1alpha1
+kind: JSBundle
+metadata:
+  name: {{ include "ui.fullname" . }}-assets-pdfjs
+  namespace: {{ default .Release.Namespace .Values.namespace }}
+spec:
+  rawFrom:
+    url: http://shipper-ui.{{ default .Release.Namespace .Values.namespace }}.svc/dist/shipper-ui/7429cf3bf6ef081c4122.mjs
+status:
+  state: Available
+  link: /dist/shipper-ui/7429cf3bf6ef081c4122.mjs

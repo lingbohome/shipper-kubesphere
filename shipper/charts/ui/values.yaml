@@ -6,7 +6,7 @@ image:
   registry: registry.cn-shanghai.aliyuncs.com/kube-shipper
   ui:
     repository: shipper-ui
-    tag: v0.2.3-5cd1f2d
+    tag: v0.2.3-07bd8cd
   pullPolicy: IfNotPresent
 imagePullSecrets: []
 
