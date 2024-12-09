@@ -12,7 +12,12 @@ spec:
     files:
       - link: /dist/shipper-ui/7429cf3bf6ef081c4122.mjs
         mimeType: "application/javascript"
-        url: http://shipper-ui.{{ default .Release.Namespace .Values.namespace }}.svc/dist/shipper-ui/7429cf3bf6ef081c4122.mjs  
+        url: http://shipper-ui.{{ default .Release.Namespace .Values.namespace }}.svc/dist/shipper-ui/7429cf3bf6ef081c4122.mjs
+      - link: /dist/shipper-ui/assets/tool-example.png
+        url: http://shipper-ui.{{ default .Release.Namespace .Values.namespace }}.svc/dist/shipper-ui/assets/tool-example.png        
+    style:
+      link: /dist/shipper-ui/css/index.css
+      url: http://shipper-ui.{{ default .Release.Namespace .Values.namespace }}.svc/dist/shipper-ui/css/index.css          
 status:
   state: Available
   link: /dist/shipper-ui/index.js
